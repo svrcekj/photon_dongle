@@ -32,6 +32,7 @@ public:
 	void send(void);
 	void sendAck(void);
 	void sendNack(void);
+	void addBurstReadHeader(bool ack, u16 len);
 private:
 	int wrPtr;
 	u8 data[SERIAL_OUTPUT_BUFFER_SIZE];

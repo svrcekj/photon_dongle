@@ -15,6 +15,8 @@ extern RequestMessage request;
 extern ComMaster comMaster;
 extern u8 * readData;
 
+u8 fake_data[] = {1,2,3,4,5,6,7,8,9,10};
+
 #if !SAFE_PARSER_ENABLED
 char *cmd_str[] = {
 		"exit",
@@ -51,14 +53,14 @@ int IncommingMessage::getNumber(void)
 	u8 *lastByte = &data[bytesRead-1];
 	u8 *firstByte = lastByte;
 
-	while (isDigit(*firstByte--)) // finds first digit in the string
+	while (charIsDigit(*firstByte--)) // finds first digit in the string
 		;
 
 	String tmp = String((char *)firstByte);
 	return tmp.toInt();
 }
 
-inline bool isDigit(u8 b)
+inline bool charIsDigit(u8 b)
 {
 	return ((b >= '0') && (b <= 9));
 }
@@ -342,6 +344,7 @@ void SerialParser_BurstRead(u8 *data, slave_mode_t slave_mode)
 	comMaster.writeNReadN(wrData, addrSize, data, len);
 
 	response.init();
+	response.addBurstReadHeader(BURST_ACK, len);
 	response.addBytes(data, len);
 	response.send();
 }
@@ -351,5 +354,7 @@ void SerialParser_BurstWrite(void)
 /***********************************/
 {
 	//TODO: To be implemented
+
+	response.sendAck();
 }
 

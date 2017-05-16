@@ -89,6 +89,15 @@ void ResponseMessage::sendNack(void)
 	send();
 }
 
+/*************************************************************/
+void ResponseMessage::addBurstReadHeader(bool ack, u16 len)
+/*************************************************************/
+{
+	addByte(READ_REGISTER_BURST);
+	addByte((u8) ack);
+	addByte(len);
+	addByte(len >> 8);
+}
 
 //====================================================================================
 

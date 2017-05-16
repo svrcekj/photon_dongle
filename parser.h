@@ -27,6 +27,9 @@
 #define WRITE_REGISTER_BURST			0x12
 #define UART_MAGIC_BYTE					0x77 // Magic byte for FTSTool (application by Alex Hong)
 
+#define BURST_ACK						0x00
+#define BURST_NACK						0x01
+
 class IncommingMessage {
 public:
 	IncommingMessage(int maxSize);
@@ -42,6 +45,8 @@ private:
 	int bytesRead;
 	int sizeLimit;
 };
+
+inline bool charIsDigit(u8 b);
 
 void SerialParser_ProcessNewCommand(u8 cmd, TDongleState *dongleState);
 void SerialParser_ReportFw(u8 *version);
