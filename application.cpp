@@ -46,8 +46,7 @@ RequestMessage request;
 ResponseMessage response;
 TDongleState dongleState;
 
-u8 readData[8192+1];
-//u8 tx_buf[64]; // Serial output buffer
+u8 readData[1024 + NR_OF_DUMMY_BYTES];
 
 /*-----------------------------------------------------------------------------------------------*/
 
@@ -342,7 +341,7 @@ void Main_ProcessSetChunkCmd(u8 readBuf[], int readPtr)
 void Main_ProcessSwitchToUsbMode()
 /***********************************************/
 {
-	//USBSerial1.begin(9600);
+	USBSerial1.begin(DUMMY_VCP_SPEED);
 	WiFi.off();
 	Led_TakeControllOfRgb();
 	RGB.color(255,255,255);
@@ -519,6 +518,7 @@ void Main_RecoverPhoton()
 	WiFi.connect();
 	WiFi.useDynamicIP();
 	myIP = WiFi.localIP();
+	USBSerial1.begin(DUMMY_VCP_SPEED);
 }
 
 /***********************************************/
@@ -606,7 +606,7 @@ void Tcp_SendUInt32(u32 data)
 		dongleState.i2cSpeed = I2c_Configure(DEFAULT_I2C_SPEED);
 	}
 
-	USBSerial1.begin(115200);
+	USBSerial1.begin(DUMMY_VCP_SPEED);
 	RGB.color(255,255,255);
 
 #if DO_NOT_USE_WIFI

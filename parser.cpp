@@ -13,9 +13,8 @@
 extern ResponseMessage response;
 extern RequestMessage request;
 extern ComMaster comMaster;
-extern u8 * readData;
-
-u8 fake_data[] = {1,2,3,4,5,6,7,8,9,10};
+extern u8 readData[1024 + NR_OF_DUMMY_BYTES];
+u8 writeData[256]; // to be send over SPI / I2C
 
 #if !SAFE_PARSER_ENABLED
 char *cmd_str[] = {
@@ -197,7 +196,7 @@ void SerialParser_ProcessNewCommand(u8 cmd, TDongleState *dongleState)
 
 	case READ_REGISTER_BURST:
 		dongleState->command_type = GOOD_COMMAND;
-		SerialParser_BurstRead(readData, dongleState->slave_mode);
+		SerialParser_BurstRead((u8 *)readData, dongleState->slave_mode);
 		break;
 
 	case WRITE_REGISTER_BURST:
@@ -301,24 +300,9 @@ void SerialParser_SetSpiSpeed(void)
 }
 
 /***************************************************************/
-void SerialParser_BurstRead(u8 *data, slave_mode_t slave_mode)
+void SerialParser_BurstRead(u8 *readData, slave_mode_t slave_mode)
 /***************************************************************/
 {
-	//---------------------------------------------------------------------------------------
-	// Packet structure:
-	//  --0- --1- --2- --3- --4-  -5-  -6-  -7-  -8-  -9-
-	// |0x11|....|....|....|....|....|....|....|....|..
-	//      aSize|burstSize|b[4] b[5] b[6] b[7] b[8]   dongle packet
-	//           |low  high|
-	//                       CMD  ADH  ADL  SH   SL
-	//  0x11 0x03 0x00 0x01 0xB6 0x40 0x00 0x00 0x01	example of GUI command B64000 256
-	//    11   03   07   00   b6   00   04				example of GUI command B60004 7
-	//----------------------------------------------------------------------------------------
-	// CMD...command,
-	// ADH...addr (MSB), ADL...addr (LSB),
-	// SH...size (MSB), SL...size (LSB)
-	//----------------------------------------------------------------------------------------
-
 	u8 wrData[5];
 	u8 addrSize = request.getReadAddressSize();
 	u8 cmd = request.getReadCommand();
@@ -341,11 +325,15 @@ void SerialParser_BurstRead(u8 *data, slave_mode_t slave_mode)
 	for (int i = 0; i < addrSize-1; i++)
 		wrData[1 + i] = b[5+i];
 
-	comMaster.writeNReadN(wrData, addrSize, data, len);
+#define LIMIT_ANSWER_LENGTH 1
+#if LIMIT_ANSWER_LENGTH
+	len = len > 256 ? 256 : len;
+#endif
+	comMaster.writeNReadN(wrData, addrSize, readData, len);
 
 	response.init();
 	response.addBurstReadHeader(BURST_ACK, len);
-	response.addBytes(data, len);
+	response.addBytes(readData, len);
 	response.send();
 }
 
@@ -353,8 +341,9 @@ void SerialParser_BurstRead(u8 *data, slave_mode_t slave_mode)
 void SerialParser_BurstWrite(void)
 /***********************************/
 {
-	//TODO: To be implemented
-
+	u16 len = request.getWriteLen();
+	request.fillDataToBeWritten(writeData);
+	comMaster.writeN(writeData, len);
 	response.sendAck();
 }
 

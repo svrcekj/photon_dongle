@@ -60,7 +60,7 @@ void SerialParser_ReportSpiInfo(bool spiSelected, u8 spiPrescaller);
 void SerialParser_SetSpeed(void);
 void SerialParser_SetSpiSpeed(void);
 void SerialParser_SetAddress(void);
-void SerialParser_BurstRead(u8 *data, slave_mode_t slave_mode);
+void SerialParser_BurstRead(u8 *readData, slave_mode_t slave_mode);
 void SerialParser_BurstWrite(void);
 
 #if SAFE_PARSER_ENABLED

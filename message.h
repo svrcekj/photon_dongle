@@ -32,6 +32,7 @@ public:
 	void send(void);
 	void sendAck(void);
 	void sendNack(void);
+	void confirmBurstWrite(void);
 	void addBurstReadHeader(bool ack, u16 len);
 private:
 	int wrPtr;
@@ -54,7 +55,9 @@ public:
 	u16 getReadAddressSize(void);
 	u8 getReadCommand(void);
 	u16 getReadLen(void);
+	u16 getWriteLen(void);
 	u8* getDataPointer(void) {return data;}
+	void fillDataToBeWritten(u8 *writeData);
 private:
 	int rdPtr;
 	bool newCommand;

@@ -47,8 +47,15 @@ void ResponseMessage::addByte(u8 b)
 void ResponseMessage::addBytes(u8 *data, int len)
 /*******************************************/
 {
+#if 1
 	while (len--)
 		addByte(*data++);
+#else
+	for (int i = 0; i < len; ++i)
+	{
+		addByte(data[i]);
+	}
+#endif
 }
 
 /*******************************************/
@@ -86,6 +93,17 @@ void ResponseMessage::sendNack(void)
 	const u8 NACK_BYTE = 0x01;
 	init();
 	addByte(NACK_BYTE);
+	send();
+}
+
+/*******************************************/
+void ResponseMessage::confirmBurstWrite(void)
+/*******************************************/
+{
+	const u8 ACK_BYTE = 0x00;
+	init();
+	addByte(WRITE_REGISTER_BURST);
+	addByte(ACK_BYTE);
 	send();
 }
 
@@ -212,6 +230,21 @@ u32 RequestMessage::dequeue32(void)
 
 }
 
+//---------------------------------------------------------------------------------------
+// Packet structure for READ_REGISTER_BURST
+//  --0- --1- --2- --3- --4-  -5-  -6-  -7-  -8-  -9-
+// |0x11|....|....|....|....|....|....|....|....|..
+//      aSize|burstSize|b[4] b[5] b[6] b[7] b[8]   dongle packet
+//           |low  high|
+//                       CMD  ADH  ADL  SH   SL
+//  0x11 0x03 0x00 0x01 0xB6 0x40 0x00 0x00 0x01	example of GUI command B64000 256
+//    11   03   07   00   b6   00   04				example of GUI command B60004 7
+//----------------------------------------------------------------------------------------
+// CMD...command,
+// ADH...addr (MSB), ADL...addr (LSB),
+// SH...size (MSB), SL...size (LSB)
+//----------------------------------------------------------------------------------------
+
 /*******************************************/
 u16 RequestMessage::getReadAddressSize(void)
 /*******************************************/
@@ -231,4 +264,45 @@ u16 RequestMessage::getReadLen(void)
 /*******************************************/
 {
 	return data[2] + (data[3] << 8);
+}
+
+/*******************************************/
+u16 RequestMessage::getWriteLen(void)
+/*******************************************/
+{
+	u8 addressType = data[1];
+	u8 burstSize = data[2];
+	return addressType == 0 ? burstSize + 1 : burstSize + 2;
+}
+
+/*******************************************************/
+void RequestMessage::fillDataToBeWritten(u8 *writeData)
+/*******************************************************/
+{
+	//---------------------------------------------------------------------------------------
+	// Packet structure for READ_REGISTER_WRITE
+	//  --0- --1- --2- --3- --4-  -5-  -6-  -7-  -8-  -9-
+	// |0x12|....|....|....|....|....|....|....|....|..
+	//      aType|bSiz| address | ---data--------------   dongle packet
+	//       AT    BS   ADH  ADL
+	//  0x12 0x00 0x02 0xF7 0x00 0x52 0x34				  example of GUI command F7 52 34
+	//----------------------------------------------------------------------------------------
+	// AT ... address type,
+	// BS ... burst size (length),
+	// ADH...addr (MSB), ADL...addr (LSB),
+	//----------------------------------------------------------------------------------------
+
+	u8 addressType = data[1];
+	u8 burstSize = data[2];
+	u8 *payloadStart = &data[5];
+
+	if (addressType == 0)
+	{
+		writeData[0] = data[3];
+		memcpy(&writeData[1], payloadStart, burstSize);
+	}
+	else
+	{
+		memcpy(&writeData[0], &data[3], burstSize+2);
+	}
 }

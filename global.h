@@ -33,6 +33,10 @@
 #define	ROWS						24
 #define COLS						14
 
+#define DUMMY_VCP_SPEED				115200
+
+#define NR_OF_DUMMY_BYTES			1
+
 const u8 FIRMWARE_VERSION[] = {0xF0, 0xB0};
 
 typedef enum {
