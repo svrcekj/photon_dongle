@@ -1,2 +1,6 @@
 # Object files
 target/
+.gitignore
+.settings
+.cproject
+.project
