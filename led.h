@@ -11,6 +11,8 @@
 #include "global.h"
 #include <application.h>
 
+#define ONBOARD_LED					D7
+
 void Led_On(u8 led_name);
 void Led_Off(u8 led_name);
 void Led_Toggle(u8 led_name);

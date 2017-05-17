@@ -58,6 +58,7 @@ public:
 	u16 getWriteLen(void);
 	u8* getDataPointer(void) {return data;}
 	void fillDataToBeWritten(u8 *writeData);
+	bool isResetCmd(void);
 private:
 	int rdPtr;
 	bool newCommand;

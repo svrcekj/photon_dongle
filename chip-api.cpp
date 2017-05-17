@@ -11,6 +11,8 @@
 #include "com-master.h"
 #include "hw-specific.h"
 
+extern TDongleState dongleState;
+
 /*****************************************************************************
  *
  *
@@ -31,14 +33,17 @@ void TChipApi::assignSlaveDevice(TSlaveDevice *slDev)
 }
 */
 
-/***********************************************/
-void TChipApi::configureDataPin(void)
-/***********************************************/
+/*********************************************************/
+void TChipApi::configureDataPin(slave_mode_t slave_mode)
+/*********************************************************/
 {
-	slDev->write4(0xB6, 0x00, 0x3C, 0x80);
-	delayMicroseconds(20);
-	slDev->write4(0xB6, 0x00, 0x31, 0x40);
-	delayMicroseconds(20);
+	if (slave_mode == SLAVE_MODE_SPI)
+	{
+		slDev->write4(0xB6, 0x00, 0x3C, 0x80);
+		delayMicroseconds(20);
+		slDev->write4(0xB6, 0x00, 0x31, 0x40);
+		delayMicroseconds(20);
+	}
 }
 
 /***********************************************/
@@ -47,14 +52,17 @@ void TChipApi::init(slave_mode_t slave_mode)
 {
 #if FORCE_NRST_LOW
 	HwSpecific_ForceNrstPinLow();
-	delayMicroseconds(50);
+	delayMicroseconds(500);
 #endif
+
 	HwSpecific_ForceModePin(slave_mode);
 	delayMicroseconds(50);
+
 	reset();
-	delayMicroseconds(10000);
+
 	HwSpecific_ReleaseModePin();
-	configureDataPin();
+
+	configureDataPin(slave_mode);
 	delayMicroseconds(100);
 }
 
@@ -62,7 +70,24 @@ void TChipApi::init(slave_mode_t slave_mode)
 void TChipApi::reset(void)
 /***********************************************/
 {
+#if USE_RSTB_HW_RESET
+	digitalWrite(RSTB_PIN, LOW);
+	delayMicroseconds(10000);
+	digitalWrite(RSTB_PIN, HIGH);
+#else
 	slDev->write3(0xF7, 0x52, 0x34);
+	delayMicroseconds(10000);
+	if (chipAnsweredByNonZeroId())
+		return;
+	else
+	{
+		slave_mode_t origSlaveMode = dongleState.slave_mode;
+		dongleState.slave_mode = SLAVE_MODE_I2C;
+		slDev->write3(0xF7, 0x52, 0x34);
+		delayMicroseconds(10000);
+		dongleState.slave_mode = origSlaveMode;
+	}
+#endif
 }
 
 /***********************************************/
@@ -121,7 +146,6 @@ void TChipApi::readChipId(u16* hwVer, u8* hwRev, u16* fwVer)
 	*hwVer = (data[1] << 8) + data[2];
 	*hwRev = data[3];
 	*fwVer = (data[5] << 8) + data[6];
-
 }
 
 /***********************************************/
@@ -139,7 +163,6 @@ void TChipApi::getRawFrame(u16 address,
 /***********************************************/
 {
 	burstReadByCommandAndAddress(0xD0, address, frameData, 2*rows*cols + 1);
-
 }
 
 /***********************************************/
@@ -148,7 +171,14 @@ void TChipApi::burstReadByCommandAndAddress(u8 cmd,
 /***********************************************/
 {
 	slDev->write3ReadN(cmd, address >> 8, address & 0x00ff, data, len);
-
 }
 
-
+/***********************************************/
+bool TChipApi::chipAnsweredByNonZeroId(void)
+/***********************************************/
+{
+	u16 hwVersion, fwVersion;
+	u8 hwRevision;
+	readChipId(&hwVersion, &hwRevision, &fwVersion);
+	return hwVersion != 0 ? true : false;
+}

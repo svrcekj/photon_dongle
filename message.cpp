@@ -306,3 +306,17 @@ void RequestMessage::fillDataToBeWritten(u8 *writeData)
 		memcpy(&writeData[0], &data[3], burstSize+2);
 	}
 }
+
+/*******************************************/
+bool RequestMessage::isResetCmd(void)
+/*******************************************/
+{
+	if ((data[3] == 0xF7) && (data[5] == 0x52) && (data[6] == 0x34))
+		return true;
+	if (data[3] == 0xA0)
+		return true;
+	if ((data[3] == 0xB6) && (data[5] == 0x00) && (data[6] == 0x21) && (data[7] == 0x01))
+		return true;
+	return false;
+}
+

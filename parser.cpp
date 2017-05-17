@@ -9,10 +9,13 @@
 #include "led.h"
 #include "message.h"
 #include "com-master.h"
+#include "chip-api.h"
 
 extern ResponseMessage response;
 extern RequestMessage request;
 extern ComMaster comMaster;
+extern TDongleState dongleState;
+extern TChipApi chipApi;
 extern u8 readData[1024 + NR_OF_DUMMY_BYTES];
 u8 writeData[256]; // to be send over SPI / I2C
 
@@ -341,9 +344,15 @@ void SerialParser_BurstRead(u8 *readData, slave_mode_t slave_mode)
 void SerialParser_BurstWrite(void)
 /***********************************/
 {
-	u16 len = request.getWriteLen();
-	request.fillDataToBeWritten(writeData);
-	comMaster.writeN(writeData, len);
-	response.sendAck();
+	if (request.isResetCmd())
+	{
+		chipApi.init(dongleState.slave_mode);
+	}
+	else // normal write command processing
+	{
+		u16 len = request.getWriteLen();
+		request.fillDataToBeWritten(writeData);
+		comMaster.writeN(writeData, len);
+	}
+	response.confirmBurstWrite();
 }
-

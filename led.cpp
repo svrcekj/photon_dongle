@@ -9,7 +9,6 @@
 
 #include "com-master.h"
 
-#define ONBOARD_LED					D7
 #define BLINK_DURATION				600	// milliseconds
 #define BLINK_PERIOD				100	// milliseconds
 

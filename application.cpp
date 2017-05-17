@@ -365,7 +365,8 @@ void Main_ProcessSwitchToSpiMode()
 /***********************************************/
 {
 	dongleState.slave_mode = SLAVE_MODE_SPI;
-	I2c_Configure(dongleState.spiSpeed);
+	Spi_Configure(dongleState.spiSpeed, &dongleState);
+	chipApi.init(dongleState.slave_mode);
 }
 
 /***********************************************/
@@ -374,6 +375,7 @@ void Main_ProcessSwitchToI2cMode()
 {
 	dongleState.slave_mode = SLAVE_MODE_I2C;
 	I2c_Configure(dongleState.i2cSpeed);
+	chipApi.init(dongleState.slave_mode);
 }
 
 /***********************************************/
@@ -578,11 +580,12 @@ void Tcp_SendUInt32(u32 data)
 	pinMode(DEBUG_PIN, OUTPUT);
 	digitalWrite(DEBUG_PIN, LOW);
 
-#if FORCE_NRST_LOW
-	HwSpecific_ForceNrstPinLow();
+#if USE_RSTB_HW_RESET
+	pinMode(RSTB_PIN, OUTPUT);
+	digitalWrite(RSTB_PIN, LOW);
+	delayMicroseconds(10000);
+	digitalWrite(RSTB_PIN, HIGH);
 #endif
-
-	HwSpecific_ForceModePin(dongleState.slave_mode);
 
 	Led_Configure();
 	Led_Blink(3);
@@ -605,6 +608,8 @@ void Tcp_SendUInt32(u32 data)
 	{
 		dongleState.i2cSpeed = I2c_Configure(DEFAULT_I2C_SPEED);
 	}
+
+	chipApi.init(dongleState.slave_mode);
 
 	USBSerial1.begin(DUMMY_VCP_SPEED);
 	RGB.color(255,255,255);
@@ -699,12 +704,13 @@ void usbSerialEvent1()
 	if (System.buttonPushed() > 1000)
 	{
 		RGB.color(255, 255, 0); // Gray
+		Led_Toggle(ONBOARD_LED);
+		delay(20);
 	}
 	else if (System.buttonPushed() > 0)
 	{
 		RGB.color(0, 0, 0); // Gray
 	}
-
 	else
 	{
 		//-------------------

@@ -11,10 +11,12 @@
 #include <application.h>
 
 #define PHOTON_CORE_CLK				(120 * 1000 * 1000) // Hz
-#define NRST_PIN            		D6
-#define MODE_PIN            		D5
-#define INTB_PIN           		 	D4
+#define NRST_PIN            		D6 // RESET of MCU
+#define MODE_PIN            		D5 // MODE select of FT chip (to select I2C or SPI)
+#define INTB_PIN           		 	D4 // INTERRUPT input from FT chip
+#define RSTB_PIN           			D3 // RESET of FT chip
 #define DEBUG_PIN           		D0
+
 
 #define SERVER_PORT					23
 
@@ -23,7 +25,7 @@
 #define DEFAULT_CHUNK_SIZE  		512
 
 #define FORCE_NRST_LOW      		1
-
+#define USE_RSTB_HW_RESET			1
 #define DO_NOT_USE_WIFI				1
 #define BUTTON_RECOVERS_PHOTON		0
 
