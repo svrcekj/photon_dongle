@@ -631,6 +631,7 @@ void Tcp_SendUInt32(u32 data)
 
 	dongleState.master_mode = DEFAULT_MASTER_MODE;
 	dongleState.slave_mode = DEFAULT_SLAVE_MODE;
+	dongleState.msg_protocol = DEFAULT_MSG_PROTOCOL;
 	dongleState.i2cSpeed = DEFAULT_I2C_SPEED;
 	dongleState.spiSpeed = DEFAULT_SPI_SPEED;
 	dongleState.dataChunkSize = DEFAULT_CHUNK_SIZE;

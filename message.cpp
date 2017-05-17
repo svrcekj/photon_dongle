@@ -12,6 +12,8 @@
 #include "led.h"
 #include <application.h>
 
+extern TDongleState dongleState;
+
 //====================================================================================
 
 //						S e r i a l     r e s p o n s e
@@ -47,15 +49,8 @@ void ResponseMessage::addByte(u8 b)
 void ResponseMessage::addBytes(u8 *data, int len)
 /*******************************************/
 {
-#if 1
 	while (len--)
 		addByte(*data++);
-#else
-	for (int i = 0; i < len; ++i)
-	{
-		addByte(data[i]);
-	}
-#endif
 }
 
 /*******************************************/
@@ -132,61 +127,124 @@ void RequestMessage::init()
 	SerialStartBytesFound = 0;
 	newCommand = false;
 	rdPtr = 0;
+	msgState = WAITING_START_BYTE;
 }
 
 /*******************************************/
 void RequestMessage::addByte(u8 newByte)
 /*******************************************/
 {
-	if (SerialStartBytesFound == 0)
+	if (dongleState.msg_protocol == MSG_PROTOCOL_GRAY_DONGLE)
 	{
-		if (newByte == UART_ANSWER_START_BYTE1)
-			SerialStartBytesFound++;
-	}
-	else if (SerialStartBytesFound == 1)
-	{
-		if (newByte == UART_ANSWER_START_BYTE2)
+		if (SerialStartBytesFound == 0)
 		{
-			SerialStartBytesFound++;
-			FoundCommandSize=0;
-			CommandSize=0;
+			if (newByte == UART_ANSWER_START_BYTE1)
+				SerialStartBytesFound++;
 		}
-		else
+		else if (SerialStartBytesFound == 1)
 		{
-			if (newByte != UART_ANSWER_START_BYTE2)
-				SerialStartBytesFound = 0;
-		}
-	}
-	else
-	{
-		if (FoundCommandSize == 0)
-		{
-			CommandSize=newByte;
-			FoundCommandSize++;
-		}
-		else if (FoundCommandSize==1)
-		{
-			CommandSize += newByte << 8;
-			FoundCommandSize++;
-			ReadCount = 0;
-		}
-		else
-		{
-			if (ReadCount < CommandSize)
+			if (newByte == UART_ANSWER_START_BYTE2)
 			{
-				if (ReadCount < SERIAL_INPUT_BUFFER_SIZE)
-					data[ReadCount++] = newByte;
-				else
+				SerialStartBytesFound++;
+				FoundCommandSize = 0;
+				CommandSize = 0;
+			}
+			else
+			{
+				if (newByte != UART_ANSWER_START_BYTE2)
 					SerialStartBytesFound = 0;
 			}
-
-			if (ReadCount == CommandSize)
+		}
+		else
+		{
+			if (FoundCommandSize == 0)
 			{
-				USBSerial1.write(data[0]);
-				newCommand = true;
-				SerialStartBytesFound = 0;
-				rdPtr = 0;
+				CommandSize = newByte;
+				FoundCommandSize++;
 			}
+			else if (FoundCommandSize == 1)
+			{
+				CommandSize += newByte << 8;
+				FoundCommandSize++;
+				ReadCount = 0;
+			}
+			else
+			{
+				if (ReadCount < CommandSize)
+				{
+					if (ReadCount < SERIAL_INPUT_BUFFER_SIZE)
+						data[ReadCount++] = newByte;
+					else
+						SerialStartBytesFound = 0;
+				}
+
+				if (ReadCount == CommandSize)
+				{
+					USBSerial1.write(data[0]);
+					newCommand = true;
+					SerialStartBytesFound = 0;
+					rdPtr = 0;
+				}
+			}
+		}
+	}
+	else if (dongleState.msg_protocol == MSG_PROTOCOL_STANDARD_COM_MASTER) // use standard protocol for Com Master (v1.1)
+	{
+		switch (msgState)
+		{
+		case WAITING_START_BYTE:
+			if (newByte == STD_PROTOCOL_START_BYTE)
+				msgState = WAITING_MSG_LEN_LSB;
+			break;
+
+		case WAITING_MSG_LEN_MSB:
+			msgLen_declared = newByte << 8;
+			msgState = WAITING_MSG_LEN_LSB;
+			break;
+
+		case WAITING_MSG_LEN_LSB:
+			msgLen_declared += newByte;
+			msgState = WAITING_MSG_CNT_MSB;
+			break;
+
+		case WAITING_MSG_CNT_MSB:
+			msgCounter = newByte << 8;
+			msgState = WAITING_MSG_CNT_LSB;
+			break;
+
+		case WAITING_MSG_CNT_LSB:
+			msgCounter += newByte;
+			msgState = WAITING_MSG_BODY;
+			msgLen_received = 5;
+			ReadCount = 0;
+			break;
+
+		case WAITING_MSG_BODY:
+			if (msgLen_received < msgLen_declared)
+			{
+				if (ReadCount < SERIAL_INPUT_BUFFER_SIZE)
+				{
+					data[ReadCount++] = newByte;
+					msgLen_received++;
+				}
+			}
+			else // waiting END byte
+			{
+				if (newByte == STD_PROTOCOL_END_BYTE)
+				{
+					msgState = WAITING_START_BYTE;
+					newCommand = true;
+				}
+				else // no END byte, msg corrupted, restart state machine
+				{
+					msgState = WAITING_START_BYTE;
+				}
+			}
+			break;
+
+		default:
+			msgState = WAITING_START_BYTE;
+			break;
 		}
 	}
 }

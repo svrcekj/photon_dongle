@@ -26,11 +26,12 @@
 
 #define FORCE_NRST_LOW      		1
 #define USE_RSTB_HW_RESET			1
-#define DO_NOT_USE_WIFI				1
+#define DO_NOT_USE_WIFI				0
 #define BUTTON_RECOVERS_PHOTON		0
 
 #define DEFAULT_SLAVE_MODE  		SLAVE_MODE_SPI
 #define DEFAULT_MASTER_MODE  		MASTER_MODE_USB
+#define DEFAULT_MSG_PROTOCOL		MSG_PROTOCOL_STANDARD_COM_MASTER
 
 #define	ROWS						24
 #define COLS						14
@@ -76,6 +77,12 @@ typedef enum {
 } slave_mode_t;
 
 typedef enum {
+	MSG_PROTOCOL_GRAY_DONGLE,
+	MSG_PROTOCOL_STANDARD_COM_MASTER,
+	MSG_PROTOCOL_TEXT_BASED
+} msg_protocol_t;
+
+typedef enum {
 	ZERO_EVENT = 0,
 	NON_ZERO_EVENT = 1
 } event_t;
@@ -112,6 +119,7 @@ typedef struct {
 	command_type_t command_type;
 	master_mode_t master_mode;
 	slave_mode_t slave_mode;
+	msg_protocol_t msg_protocol;
 	u8 spiPrescaller;
 	u32 spiSpeed;
 	u32 i2cSpeed;

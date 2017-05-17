@@ -20,6 +20,9 @@
 #define UART_ANSWER_START_BYTE1			0x07
 #define UART_ANSWER_START_BYTE2			0x01
 
+#define STD_PROTOCOL_START_BYTE			'{'
+#define STD_PROTOCOL_END_BYTE			'}'
+
 /*********************/
 class ResponseMessage
 /*********************/
@@ -60,11 +63,27 @@ public:
 	void fillDataToBeWritten(u8 *writeData);
 	bool isResetCmd(void);
 private:
+
+	typedef enum {
+		WAITING_START_BYTE,
+		WAITING_MSG_LEN_MSB,
+		WAITING_MSG_LEN_LSB,
+		WAITING_MSG_CNT_MSB,
+		WAITING_MSG_CNT_LSB,
+		WAITING_MSG_BODY
+	} msgState_t;
+
+	msgState_t msgState;
+	int msgLen_declared;
+	int msgLen_received;
+	int msgCounter;
+
 	int rdPtr;
 	bool newCommand;
 	u8 data[SERIAL_INPUT_BUFFER_SIZE];
 	int SerialStartBytesFound;
 	int FoundCommandSize;
+	int CounterBytesFound;
 	int CommandSize;
 	int ReadCount;
 };
