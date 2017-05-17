@@ -92,6 +92,7 @@ void Led_ManageAll(TDongleState *dongleState)
 {
 	static system_tick_t blink_stop_time;
 	static system_tick_t blink_next_toggle_time;
+	static u32 blink_period;
 
 	//static system_tick_t rgb_timeout;
 
@@ -128,14 +129,22 @@ void Led_ManageAll(TDongleState *dongleState)
 		if (dongleState->command_type == GOOD_COMMAND)
 		{
 			dongleState->command_type = NO_COMMAND;
+			blink_period = BLINK_PERIOD;
+			if (millis() >= blink_stop_time) // previous state was iddle
+			{
+				blink_next_toggle_time = millis() + blink_period;
+			}
 			blink_stop_time = millis() + BLINK_DURATION;
-			blink_next_toggle_time = millis() + BLINK_PERIOD;
 		}
 		else if (dongleState->command_type == BAD_COMMAND)
 		{
 			dongleState->command_type = NO_COMMAND;
+			blink_period = BLINK_PERIOD / 4;
+			if (millis() >= blink_stop_time) // previous state was iddle
+			{
+				blink_next_toggle_time = millis() + blink_period;
+			}
 			blink_stop_time = millis() + BLINK_DURATION;
-			blink_next_toggle_time = millis() + BLINK_PERIOD / 4;
 		}
 
 		if (millis() < blink_stop_time)
@@ -143,7 +152,7 @@ void Led_ManageAll(TDongleState *dongleState)
 			if (millis() > blink_next_toggle_time)
 			{
 				Led_Toggle(ONBOARD_LED);
-				blink_next_toggle_time += BLINK_PERIOD;
+				blink_next_toggle_time += blink_period;
 			}
 		}
 		else

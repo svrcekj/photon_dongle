@@ -573,6 +573,44 @@ void Tcp_SendUInt32(u32 data)
 /************************/  void setup()    /**************************/
 /**********************************************************************/
 {
+	// ========== MASTER TOGGLE PARTY ===========
+	pinMode(DEBUG_PIN, OUTPUT);
+	pinMode(NRST_PIN, OUTPUT);
+	pinMode(RSTB_PIN, OUTPUT);
+	pinMode(MODE_PIN, OUTPUT);
+	pinMode(INTB_PIN, OUTPUT);
+
+	digitalWrite(DEBUG_PIN, HIGH);
+	digitalWrite(NRST_PIN, HIGH);
+	digitalWrite(RSTB_PIN, HIGH);
+	digitalWrite(MODE_PIN, HIGH);
+	digitalWrite(INTB_PIN, HIGH);
+
+	digitalWrite(DEBUG_PIN, LOW);
+	digitalWrite(NRST_PIN, LOW);
+	digitalWrite(RSTB_PIN, LOW);
+	digitalWrite(MODE_PIN, LOW);
+	digitalWrite(INTB_PIN, LOW);
+
+	digitalWrite(DEBUG_PIN, HIGH);
+	digitalWrite(NRST_PIN, HIGH);
+	digitalWrite(RSTB_PIN, HIGH);
+	digitalWrite(MODE_PIN, HIGH);
+	digitalWrite(INTB_PIN, HIGH);
+
+	digitalWrite(DEBUG_PIN, LOW);
+	digitalWrite(NRST_PIN, LOW);
+	digitalWrite(RSTB_PIN, LOW);
+	digitalWrite(MODE_PIN, LOW);
+	digitalWrite(INTB_PIN, LOW);
+
+	pinMode(DEBUG_PIN, INPUT);
+	pinMode(NRST_PIN, INPUT);
+	pinMode(RSTB_PIN, INPUT);
+	pinMode(MODE_PIN, INPUT);
+	pinMode(INTB_PIN, INPUT);
+	// ========== MASTER TOGGLE PARTY =========== ENDED ===========
+
 	Led_TakeControllOfRgb();
 	RGB.color(255,0,0);
 
@@ -585,6 +623,7 @@ void Tcp_SendUInt32(u32 data)
 	digitalWrite(RSTB_PIN, LOW);
 	delayMicroseconds(10000);
 	digitalWrite(RSTB_PIN, HIGH);
+	delayMicroseconds(10000);
 #endif
 
 	Led_Configure();

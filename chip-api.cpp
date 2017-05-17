@@ -74,6 +74,7 @@ void TChipApi::reset(void)
 	digitalWrite(RSTB_PIN, LOW);
 	delayMicroseconds(10000);
 	digitalWrite(RSTB_PIN, HIGH);
+	delayMicroseconds(10000);
 #else
 	slDev->write3(0xF7, 0x52, 0x34);
 	delayMicroseconds(10000);
