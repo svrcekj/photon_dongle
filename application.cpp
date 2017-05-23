@@ -14,6 +14,9 @@
 #include "help.h"
 #include "parser.h"
 #include "hw-specific.h"
+#include "message.h"
+#include "request.h"
+#include "reply.h"
 
 #include "application.h"
 
@@ -25,7 +28,7 @@
 #include "stm32f2xx_spi.h"
 #include "stm32f2xx_rcc.h"
 #include "hw_config.h"
-#include "message.h"
+
 
 
 /*-----------------------------------------------------------------------------------------------*/
@@ -41,22 +44,48 @@ IPAddress myIP;
 ComMaster comMaster = ComMaster(DEFAULT_SLAVE_MODE);
 TChipApi chipApi = TChipApi(&comMaster);
 
-IncommingMessage wifiRequest = IncommingMessage(256);
-RequestMessage request;
-ResponseMessage response;
-TDongleState dongleState;
+//TextCommand textCommand = TextCommand(256);
+#if 0
+GrayDongleRequest serialGrayDongleRequest;
+StdProtocolRequest serialStdProtoRequest;
+ARequestMessage *serialRequest = NULL;
 
-u8 readData[1024 + NR_OF_DUMMY_BYTES];
+GrayDongleRequest wifilGrayDongleRequest;
+StdProtocolRequest wifiStdProtoRequest;
+ARequestMessage *wifiRequest = NULL;
+
+GrayDongleReply serialGrayDongleReply;
+StdProtocolReply serialStdProtoReply;
+AReplyMessage *serialReply = NULL;
+
+GrayDongleReply wifiGrayDongleReply;
+StdProtocolReply wifiStdProtoReply;
+AReplyMessage *wifiReply = NULL;
+#endif
+
+StdProtocolRequest staticUsbRequest;
+StdProtocolRequest staticWifiRequest;
+
+StdProtocolRequest *usbRequest = &staticUsbRequest;
+StdProtocolRequest *wifiRequest = &staticWifiRequest;
+
+StdProtocolReply staticUsbReply;
+StdProtocolReply staticWifiReply;
+
+StdProtocolReply *usbReply = &staticUsbReply;
+StdProtocolReply *wifiReply = &staticWifiReply;
+
+TDongleState dongleState;
 
 /*-----------------------------------------------------------------------------------------------*/
 
 SYSTEM_MODE(MANUAL);
 
 /*-----------------------------------------------------------------------------------------------*/
-
-
+#if 0
 void Main_ProcessSetSpeedCmd(u8 readBuf[], int readPtr);
 void Main_ProcessSetChunkCmd(u8 readBuf[], int readPtr);
+#endif
 void Main_ProcessSwitchToUsbMode();
 void Main_ProcessSwitchToWifiMode();
 void Main_ProcessSwitchToSpiMode();
@@ -64,17 +93,60 @@ void Main_ProcessSwitchToI2cMode();
 slave_mode_t Main_ProcessToggleSlaveMode();
 void Main_ProcessEnableInterrupts();
 void Main_ProcessDisableInterrupts();
+#if 0
 void Main_ProcessGeneralReadCmd(u8 readBuf[], int readPtr);
 void Main_ProcessGeneralWriteCmd(u8 readBuf[], int readPtr);
-
+#endif
 void Main_RecoverPhoton();
 
+#if 0
 void Tcp_SendData(u8 data[], int dataSize);
 void Tcp_SendUInt32(u32 data);
-
 void Other_SendDummyData(int len);
+#endif
 
 void button_handler(system_event_t event, int duration, void* );
+
+
+
+// Software initialization
+void initObjects(void)
+{
+	usbRequest->assignReply(usbReply);
+	wifiRequest->assignReply(wifiReply);
+
+	dongleState.master_mode = DEFAULT_MASTER_MODE;
+	dongleState.slave_mode = DEFAULT_SLAVE_MODE;
+	dongleState.msg_protocol = DEFAULT_MSG_PROTOCOL;
+	dongleState.i2cSpeed = DEFAULT_I2C_SPEED;
+	dongleState.spiSpeed = DEFAULT_SPI_SPEED;
+	dongleState.dataChunkSize = DEFAULT_CHUNK_SIZE;
+	dongleState.command_type = NO_COMMAND;
+	dongleState.wifi = WIFI_NOT_CONNECTED;
+	dongleState.tcp_port_state = PORT_CLOSED;
+	dongleState.vcp_port_state = PORT_CLOSED;
+
+	if (dongleState.msg_protocol == MSG_PROTOCOL_STANDARD_COM_MASTER)
+	{
+		//usbRequest = usbStdProtocolRequest;
+	}
+	else //if (dongleState.msg_protocol == MSG_PROTOCOL_GRAY_DONGLE)
+	{
+		//usbRequest = usbGrayDongleRequest;
+	}
+
+	if (dongleState.slave_mode == SLAVE_MODE_SPI)
+	{
+		dongleState.spiSpeed = Spi_Configure(DEFAULT_SPI_SPEED, &dongleState);
+	}
+	else
+	{
+		dongleState.i2cSpeed = I2c_Configure(DEFAULT_I2C_SPEED);
+	}
+
+	chipApi.init(dongleState.slave_mode);
+}
+
 
 /*****************************************************************************
  *
@@ -84,7 +156,7 @@ void button_handler(system_event_t event, int duration, void* );
  *
  *****************************************************************************/
 
-
+#if 0
 /***********************************************/
 void Parser_AddToBuffer(u8 * buffer, int count)
 /***********************************************/
@@ -336,6 +408,7 @@ void Main_ProcessSetChunkCmd(u8 readBuf[], int readPtr)
 {
 	dongleState.dataChunkSize = Parser_GetNumberFromString(&readBuf[10], readPtr - 10);
 }
+#endif
 
 /***********************************************/
 void Main_ProcessSwitchToUsbMode()
@@ -408,7 +481,7 @@ void Main_ProcessDisableInterrupts()
 
 }
 
-
+#if 0
 /************************************************************************************************/
 void Main_ProcessGeneralReadCmd(u8 readBuf[], int readPtr)
 /************************************************************************************************/
@@ -496,6 +569,7 @@ void Main_ProcessGeneralWriteCmd(u8 readBuf[], int readPtr)
 		comMaster.writeN(arrayToSend, index);
 	}
 }
+#endif
 
 /***********************************************/
 void Main_RecoverPhoton()
@@ -523,6 +597,7 @@ void Main_RecoverPhoton()
 	USBSerial1.begin(DUMMY_VCP_SPEED);
 }
 
+#if 0
 /***********************************************/
 void Other_SendDummyData(int len)
 /***********************************************/
@@ -562,7 +637,38 @@ void Tcp_SendUInt32(u32 data)
 	}
 	Tcp_SendData(tmp, 4);
 }
+#endif
 
+//================================ FROM PARTICLE FW DOC ==================================
+// EXAMPLE USAGE
+//========================================================================================
+
+void button_handler(system_event_t event, int duration, void* )
+{
+#if 1
+    if (!duration) // just pressed
+    {
+        RGB.color(10, 5, 10); // Gray
+    }
+    else // just released
+    {
+    	if (System.buttonPushed() > 1000)
+    	{
+    		System.dfu();
+    	}
+    	else if (System.buttonPushed() > 500)
+    	{
+#if BUTTON_RECOVERS_PHOTON
+    		Main_RecoverPhoton();
+#endif
+    	}
+    	else if (System.buttonPushed() > 10)
+    	{
+    		Main_ProcessToggleSlaveMode();
+    	}
+    }
+#endif
+}
 
 //==============================================================================================================================
 //===========================================   M A I N    A N D    L O O P    =================================================
@@ -609,7 +715,7 @@ void Tcp_SendUInt32(u32 data)
 	pinMode(RSTB_PIN, INPUT);
 	pinMode(MODE_PIN, INPUT);
 	pinMode(INTB_PIN, INPUT);
-	// ========== MASTER TOGGLE PARTY =========== ENDED ===========
+	// ========== MASTER TOGGLE PARTY =========== ENDED :-( ===========
 
 	Led_TakeControllOfRgb();
 	RGB.color(255,0,0);
@@ -629,27 +735,7 @@ void Tcp_SendUInt32(u32 data)
 	Led_Configure();
 	Led_Blink(3);
 
-	dongleState.master_mode = DEFAULT_MASTER_MODE;
-	dongleState.slave_mode = DEFAULT_SLAVE_MODE;
-	dongleState.msg_protocol = DEFAULT_MSG_PROTOCOL;
-	dongleState.i2cSpeed = DEFAULT_I2C_SPEED;
-	dongleState.spiSpeed = DEFAULT_SPI_SPEED;
-	dongleState.dataChunkSize = DEFAULT_CHUNK_SIZE;
-	dongleState.command_type = NO_COMMAND;
-	dongleState.wifi = WIFI_NOT_CONNECTED;
-	dongleState.tcp_port_state = PORT_CLOSED;
-	dongleState.vcp_port_state = PORT_CLOSED;
-
-	if (dongleState.slave_mode == SLAVE_MODE_SPI)
-	{
-		dongleState.spiSpeed = Spi_Configure(DEFAULT_SPI_SPEED, &dongleState);
-	}
-	else
-	{
-		dongleState.i2cSpeed = I2c_Configure(DEFAULT_I2C_SPEED);
-	}
-
-	chipApi.init(dongleState.slave_mode);
+	initObjects();
 
 	USBSerial1.begin(DUMMY_VCP_SPEED);
 	RGB.color(255,255,255);
@@ -673,7 +759,7 @@ void usbSerialEvent1()
 /************************/
 {
 	while (USBSerial1.available())
-		request.addByte(USBSerial1.read());
+		usbRequest->addByte(USBSerial1.read());
 }
 
 
@@ -683,59 +769,44 @@ void usbSerialEvent1()
 {
 #if !DO_NOT_USE_WIFI
 
-	static int noDataCnt;
+	//static int noDataCnt;
 
-	//--------------------
-	// WiFi incomming data
-	//--------------------
-	int dataWaiting = client.available();
-	if (dataWaiting > 0)
+	//---------------------------------
+	// Process WiFi incomming message
+	//---------------------------------
+	if (int dataWaiting = client.available() > 0)
 	{
-		Parser_AddToBuffer(wifiRequest.toArray(), wifiRequest.length());
-	}
-	else
-	{
-		if (wifiRequest.length() > 0)
+		for (int i = 0; i < dataWaiting; ++i)
 		{
-			Parser_ProcessRequest();
-		}
-		else
-		{
-			noDataCnt++;
-			if (noDataCnt == 1000)
-			{
-				wifiRequest.reset();
-				noDataCnt = 0;
-			}
+			wifiRequest->addByte(client.read());
 		}
 	}
+
+	if (wifiRequest->isCompleted())
+	{
+		wifiRequest->processNew(&dongleState);
+	}
+
 	if (!client.connected())
 	{
 		client = server.available();
-		dongleState.tcp_port_state = PORT_CLOSED;
 	}
-	else
-	{
-		dongleState.tcp_port_state = PORT_OPENED;
-	}
+
+	dongleState.tcp_port_state = client.connected() ? PORT_OPENED : PORT_CLOSED;
+
 #endif
 
-	//--------------------
-	// USB incomming data
-	//--------------------
-	if (request.newCommandAvailable())
+	//---------------------------------------------
+	// Process USB-VCP incomming message
+	//---------------------------------------------
+	// Note: New incomming bytes are added to the usbRequest
+	// inside the usbSerialEvent1() function call
+	if (usbRequest->isCompleted())
 	{
-		request.processNewCommand(&dongleState);
+		usbRequest->processNew(&dongleState);
 	}
 
-	if (USBSerial1.isConnected())
-	{
-		dongleState.vcp_port_state = PORT_OPENED;
-	}
-	else
-	{
-		dongleState.vcp_port_state = PORT_CLOSED;
-	}
+	dongleState.vcp_port_state = USBSerial1.isConnected() ? PORT_OPENED : PORT_CLOSED;
 
 	//-------------------
 	// Button management
@@ -763,35 +834,3 @@ void usbSerialEvent1()
 //==============================================================================================================================
 //==================================================   E N D   O F   L O O P   =================================================
 //==============================================================================================================================
-
-
-//================================ FROM PARTICLE FW DOC ==================================
-// EXAMPLE USAGE
-//========================================================================================
-
-void button_handler(system_event_t event, int duration, void* )
-{
-#if 1
-    if (!duration) // just pressed
-    {
-        RGB.color(10, 5, 10); // Gray
-    }
-    else // just released
-    {
-    	if (System.buttonPushed() > 1000)
-    	{
-    		System.dfu();
-    	}
-    	else if (System.buttonPushed() > 500)
-    	{
-#if BUTTON_RECOVERS_PHOTON
-    		Main_RecoverPhoton();
-#endif
-    	}
-    	else if (System.buttonPushed() > 10)
-    	{
-    		Main_ProcessToggleSlaveMode();
-    	}
-    }
-#endif
-}

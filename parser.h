@@ -11,6 +11,7 @@
 #include "global.h"
 #include <application.h>
 
+#if 0
 #define	SAFE_PARSER_ENABLED				1
 #define TRANSLATE_SPI_TO_I2C_COMMANDS	1
 
@@ -30,25 +31,9 @@
 #define BURST_ACK						0x00
 #define BURST_NACK						0x01
 
-class IncommingMessage {
-public:
-	IncommingMessage(int maxSize);
-	void reset(void);
-	void addByte(u8 newByte);
-	~IncommingMessage();
-	void terminate(void) {data[bytesRead] = '\0';}
-	int length(void) {return bytesRead;}
-	u8 *toArray(void) {return data;}
-	int getNumber();
-private:
-	u8 *data;
-	int bytesRead;
-	int sizeLimit;
-};
-
 inline bool charIsDigit(u8 b);
 
-void SerialParser_ProcessNewCommand(u8 cmd, TDongleState *dongleState);
+void SerialParser_ProcessGrayDongleCommand(u8 cmd, TDongleState *dongleState);
 void SerialParser_ReportFw(u8 *version);
 void SerialParser_AddByte(u8 buf);
 void SerialParser_ReportMagicSequence(void);
@@ -69,12 +54,13 @@ cmd_t Parser_GetCmdCode(u8 *b, int len);
 cmd_t Parser_DecodeCmd(u8 readBuf[], int readPtr);
 #endif
 
-void Parser_AddToBuffer(u8 * buffer, int count);
+//void Parser_AddToBuffer(u8 * buffer, int count);
 void Parser_Reset(void);
 int Parser_GetChunkSize(u8 val);
 //u32 Parser_GetSpiSpeedFromCmd(u8 readBuf[], int readPtr);
 //u32 Parser_GetChunkSizeFromCmd(u8 readBuf[], int readPtr);
 u32 Parser_GetNumberFromString(u8 str[], int len);
 
+#endif
 
 #endif /* USER_APPLICATIONS_DONGLE2_PARSER_H_ */

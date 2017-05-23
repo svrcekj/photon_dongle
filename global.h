@@ -67,6 +67,11 @@ typedef enum {
 } command_type_t;
 
 typedef enum {
+	MASTER_IFACE_WIFI,
+	MASTER_IFACE_USB
+} masterInterface_t;
+
+typedef enum {
 	MASTER_MODE_USB,
 	MASTER_MODE_WIFI
 } master_mode_t;
@@ -111,6 +116,18 @@ typedef enum {
 	PARSER_CMD_GENERAL_WRITE,
 	PARSER_CMD_UNKNOWN
 } cmd_t;
+
+typedef enum {
+    ACTION_WRITE        = (uint16_t)0x0001U,
+    ACTION_READ         = (uint16_t)0x0002U,
+    ACTION_WRITE_READ   = (uint16_t)0x0003U,
+    ACTION_GET_VERSION  = (uint16_t)0x0004U,
+} ProtocolAction;
+
+typedef enum {
+	NUMBER_FORMAT_BIG_ENDIAN,
+	NUMBER_FORMAT_LITTLE_ENDIAN
+} EndianFormat;
 
 typedef struct {
 	wifi_state_t wifi;

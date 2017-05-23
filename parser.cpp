@@ -11,56 +11,17 @@
 #include "com-master.h"
 #include "chip-api.h"
 
+#if 0
+
 extern ResponseMessage response;
-extern RequestMessage request;
+extern RequestMessage serialRequest;
 extern ComMaster comMaster;
 extern TDongleState dongleState;
 extern TChipApi chipApi;
 extern u8 readData[1024 + NR_OF_DUMMY_BYTES];
 u8 writeData[256]; // to be send over SPI / I2C
 
-#if !SAFE_PARSER_ENABLED
-char *cmd_str[] = {
-		"exit",
-		//TODO: COMMAND TABLE NEEDS TO BE COMPLETTED
-		""
-};
-#endif
 
-IncommingMessage::IncommingMessage(int maxSize)
-{
-	sizeLimit = maxSize;
-	data = new u8[maxSize];
-	reset();
-}
-
-IncommingMessage::~IncommingMessage()
-{
-	delete [] data;
-}
-
-void IncommingMessage::reset(void)
-{
-	bytesRead = 0;
-}
-
-void IncommingMessage::addByte(u8 newByte)
-{
-	if (sizeLimit < bytesRead)
-		data[bytesRead++] = newByte;
-}
-
-int IncommingMessage::getNumber(void)
-{
-	u8 *lastByte = &data[bytesRead-1];
-	u8 *firstByte = lastByte;
-
-	while (charIsDigit(*firstByte--)) // finds first digit in the string
-		;
-
-	String tmp = String((char *)firstByte);
-	return tmp.toInt();
-}
 
 inline bool charIsDigit(u8 b)
 {
@@ -145,7 +106,7 @@ u32 Parser_GetNumberFromString(u8 str[], int len)
 }
 
 /**********************************************************************/
-void SerialParser_ProcessNewCommand(u8 cmd, TDongleState *dongleState)
+void SerialParser_ProcessGrayDongleCommand(u8 cmd, TDongleState *dongleState)
 /**********************************************************************/
 {
 	switch (cmd)
@@ -344,15 +305,17 @@ void SerialParser_BurstRead(u8 *readData, slave_mode_t slave_mode)
 void SerialParser_BurstWrite(void)
 /***********************************/
 {
-	if (request.isResetCmd())
+	if (serialRequest.isResetCmd())
 	{
 		chipApi.init(dongleState.slave_mode);
 	}
 	else // normal write command processing
 	{
-		u16 len = request.getWriteLen();
-		request.fillDataToBeWritten(writeData);
+		u16 len = serialRequest.getWriteLen();
+		serialRequest.fillDataToBeWritten(writeData);
 		comMaster.writeN(writeData, len);
 	}
 	response.confirmBurstWrite();
 }
+
+#endif
