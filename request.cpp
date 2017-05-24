@@ -63,25 +63,12 @@ void StdProtocolRequest::addByte(u8 newByte)
 	// check the delay between received bytes only when not waiting the start byte
 	if (msgState != WAITING_START_BYTE)
 	{
-		system_tick_t t_now = millis();
 		byteToByteDelay = millis() - lastByteArrival;
-/*
-		USBSerial1.write(t_now>>24);
-		USBSerial1.write(t_now>>16);
-		USBSerial1.write(t_now>>8);
-		USBSerial1.write(t_now);
-		USBSerial1.write(byteToByteDelay>>24);
-		USBSerial1.write(byteToByteDelay>>16);
-		USBSerial1.write(byteToByteDelay>>8);
-		USBSerial1.write(byteToByteDelay);
-*/
 		if (byteToByteDelay > BYTE_TO_BYTE_MAX_DELAY)
 			clear();
 	}
 
 	lastByteArrival = millis();
-
-	//USBSerial1.write(msgState);
 
 	switch (msgState)
 	{
@@ -107,12 +94,22 @@ void StdProtocolRequest::addByte(u8 newByte)
 
 	case WAITING_MSG_CNT_2:
 		msgCounter += newByte;
-		msgState = WAITING_MSG_BODY;
-		receivedLength = 5;
+		msgState = WAITING_ACTION_1;
+		break;
+
+	case WAITING_ACTION_1:
+		msgAction = newByte << 8;
+		msgState = WAITING_ACTION_2;
+		break;
+
+	case WAITING_ACTION_2:
+		msgAction += newByte;
+		msgState = WAITING_PAYLOAD;
+		receivedLength = 7;
 		writeIndex = 0;
 		break;
 
-	case WAITING_MSG_BODY:
+	case WAITING_PAYLOAD:
 		if (receivedLength < (declaredLength - 1))
 		{
 			if (writeIndex < REQUEST_MSG_MAX_SIZE)
@@ -145,33 +142,60 @@ void StdProtocolRequest::addByte(u8 newByte)
 
 void StdProtocolRequest::processNew(TDongleState* dongleState)
 {
-	reply->init(masterInterface, msgCounter);
+/*
+	<START> <SIZE> <COUNTER> <ACTION> <PAYLOAD ..... PAYLOAD> <END>
+	   0    1   2   3    4    5    6    7  ......... LEN-1     LEN
 
-	switch (getAction())
+	Write: (12 bytes = 8 + 4)
+	7B 00 0C FF FF 00 01 B6 00 23 01 7D
+	7B 00 0A FF FF 00 01 00 00 7D .......... reply
+
+	Read: (10 bytes)
+	7B 00 0B FF FF 00 02 00 04 00 7D
+	7B 00 0E FF FF 00 02 AA BB CC DD 7D ..... reply
+
+	WriteRead: (14 bytes)
+	7B 00 0E FF FF 00 03 B6 00 07 00 02 01 7D
+	7B 00 0B FF FF 00 02 AA BB CC 7D  .... reply
+
+
+	GetVersion: (8 bytes)
+	7B 00 08 FF FF 00 04 7D
+	7B 00 0C FF FF 00 04 00 00 12 34 7D .... reply
+*/
+
+	completed = false;
+	reply->init(masterInterface, msgCounter);
+	USBSerial1.write(msgAction>>8);
+	USBSerial1.write(msgAction);
+
+	switch (msgAction)
 	{
 	case ACTION_WRITE:
 	{
-		u8 * writeData = data+2; // Skip The Action field
-		const u16 writeLen = writeIndex - 2; // payload size without Action size
-		comMaster.writeN(writeData, writeLen);
+		comMaster.writeN(data+2, writeIndex-2);
 		reply->sendWriteStatus(0);
 		break;
 	}
 	case ACTION_READ:
 	{
-		const int readLen = getReadLength();
-		comMaster.readN(readData, readLen);
-		reply->setNrOfDummyBytes(nrOfDummyBytes);
+		comMaster.readN(readData, getReadLength());
+		reply->setPayloadData(readData, getReadLength());
 		reply->send();
 		break;
 	}
 	case ACTION_WRITE_READ:
+		comMaster.writeNReadN(data+2, writeIndex-2, readData, getReadLength());
+		reply->setPayloadData(readData, getReadLength());
 		break;
 
 	case ACTION_GET_VERSION:
+		reply->sendFwVersion(0xABCD);
+		break;
+
+	default:
 		break;
 	}
-	completed = false;
 }
 
 u8 StdProtocolRequest::dequeue8(void)
@@ -213,12 +237,20 @@ u32 StdProtocolRequest::dequeue32(EndianFormat endianFormat)
 
 u16 StdProtocolRequest::getReadLength(void)
 {
-	return 0;
+	return getField(READ_LEN_POS);
 }
 
 ProtocolAction StdProtocolRequest::getAction(void)
 {
-	return (ProtocolAction) (data[ACTION_POS] + (data[ACTION_POS+1] >> 8));
+	return (ProtocolAction) msgAction;
 }
 
+u16 StdProtocolRequest::getField(u16 position)
+{
+	return ((data[position] << 8) + (data[position+1]));
+}
 
+/*void StdProtocolRequest::prepareDataToSend(u8* srcData, u16 len)
+{
+	memcpy(data, srcData, len);
+}*/

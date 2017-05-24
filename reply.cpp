@@ -15,6 +15,7 @@ extern TDongleState dongleState;
 void StdProtocolReply::init(masterInterface_t ifaceType, u16 msgCounter)
 {
 	data[0] = START_BYTE;;
+	writeIndex = 7;
 	masterInterface = ifaceType;
 	setField(COUNTER_POS, msgCounter);
 }
@@ -67,6 +68,14 @@ void StdProtocolReply::sendWriteStatus(u16 status)
 	send();
 }
 
+void StdProtocolReply::sendFwVersion(u16 version)
+{
+	setField(ACTION_POS, (u16) request->getAction());
+	setField(ERROR_POS, 0);
+	writeIndex = PAYLOAD_POS;
+	send();
+}
+
 void StdProtocolReply::setField(u16 position, u16 field)
 {
 	data[position] = field >> 8;
@@ -77,8 +86,18 @@ void StdProtocolReply::finalize(void)
 {
 	if (writeIndex < REPLY_MSG_MAX_SIZE)
 	{
-		setField(MSG_SIZE_POS, writeIndex);
+		setField(MSG_SIZE_POS, writeIndex+1);
 		data[writeIndex] = STOP_BYTE;
 	}
 }
 
+void StdProtocolReply::setPayloadData(u8* payload, int len)
+{
+#if USE_SAFE_COPY
+	writeIndex = 7;
+	addData(payload, len);
+#else
+	memcpy(data+7, payload, len);
+	writeIndex = 7 + len;
+#endif
+}

@@ -37,6 +37,8 @@ public:
 	bool isCompleted(void) {return completed;}
 	void processNew(TDongleState *dongleState);
 	ProtocolAction getAction(void);
+	u16 getField(u16 position);
+	//void prepareDataToSend(u8 *srcData, u16 len);
 	//u16 getReadAddressSize(void);
 	//u8 getReadCommand(void);
 	//void fillDataToBeWritten(u8 *writeData);
@@ -55,16 +57,23 @@ private:
 		ACTION_POS = 5,
 		ERROR_POS = 7
 	};
+	enum {
+		READ_LEN_POS = 7
+	};
 	typedef enum {
 		WAITING_START_BYTE,
 		WAITING_MSG_LEN_1,
 		WAITING_MSG_LEN_2,
 		WAITING_MSG_CNT_1,
 		WAITING_MSG_CNT_2,
-		WAITING_MSG_BODY
+		WAITING_ACTION_1,
+		WAITING_ACTION_2,
+		WAITING_PAYLOAD,
+		WAITING_END_BYTE
 	} msgState_t;
 	msgState_t msgState;
-	int msgCounter;
+	u16 msgCounter;
+	u16 msgAction;
 	//int SerialStartBytesFound;
 	//int FoundCommandSize;
 	//int CounterBytesFound;
