@@ -26,11 +26,12 @@
 
 #define FORCE_NRST_LOW      		1
 #define USE_RSTB_HW_RESET			1
-#define DO_NOT_USE_WIFI				0
+#define DO_NOT_USE_WIFI				1
 #define BUTTON_RECOVERS_PHOTON		0
 
 #define DEFAULT_SLAVE_MODE  		SLAVE_MODE_SPI
 #define DEFAULT_MASTER_MODE  		MASTER_MODE_USB
+#define DEFAULT_MASTER_INTERFACE	MASTER_INTERFACE_USB
 #define DEFAULT_MSG_PROTOCOL		MSG_PROTOCOL_STANDARD_COM_MASTER
 
 #define	ROWS						24
@@ -67,8 +68,8 @@ typedef enum {
 } command_type_t;
 
 typedef enum {
-	MASTER_IFACE_WIFI,
-	MASTER_IFACE_USB
+	MASTER_INTERFACE_WIFI,
+	MASTER_INTERFACE_USB
 } masterInterface_t;
 
 typedef enum {

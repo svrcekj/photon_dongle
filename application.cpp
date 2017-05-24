@@ -115,6 +115,9 @@ void initObjects(void)
 	usbRequest->assignReply(usbReply);
 	wifiRequest->assignReply(wifiReply);
 
+	usbReply->assignRequest(usbRequest);
+	wifiReply->assignRequest(wifiRequest);
+
 	dongleState.master_mode = DEFAULT_MASTER_MODE;
 	dongleState.slave_mode = DEFAULT_SLAVE_MODE;
 	dongleState.msg_protocol = DEFAULT_MSG_PROTOCOL;
@@ -753,16 +756,6 @@ void button_handler(system_event_t event, int duration, void* )
 	System.on(button_status, button_handler);
 }
 
-
-/************************/
-void usbSerialEvent1()
-/************************/
-{
-	while (USBSerial1.available())
-		usbRequest->addByte(USBSerial1.read());
-}
-
-
 /*********************************************************************/
 /**********************/    void loop()     /*************************/
 /*********************************************************************/
@@ -799,8 +792,12 @@ void usbSerialEvent1()
 	//---------------------------------------------
 	// Process USB-VCP incomming message
 	//---------------------------------------------
-	// Note: New incomming bytes are added to the usbRequest
-	// inside the usbSerialEvent1() function call
+	while (USBSerial1.available())
+	{
+		u8 b = USBSerial1.read();
+		usbRequest->addByte(b);
+	}
+
 	if (usbRequest->isCompleted())
 	{
 		usbRequest->processNew(&dongleState);
@@ -816,7 +813,7 @@ void usbSerialEvent1()
 	{
 		RGB.color(255, 255, 0); // Gray
 		Led_Toggle(ONBOARD_LED);
-		delay(20);
+		delay(50);
 	}
 	else if (System.buttonPushed() > 0)
 	{
@@ -827,7 +824,7 @@ void usbSerialEvent1()
 		//-------------------
 		// LED management
 		//-------------------
-		Led_ManageAll(&dongleState);
+		//Led_ManageAll(&dongleState);
 	}
 }
 

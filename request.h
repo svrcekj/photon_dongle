@@ -21,6 +21,8 @@
 #define STD_PROTOCOL_START_BYTE				'{'
 #define STD_PROTOCOL_END_BYTE				'}'
 
+#define BYTE_TO_BYTE_MAX_DELAY				50 // milliseconds
+
 class StdProtocolReply;
 
 /*******************************************/
@@ -28,6 +30,7 @@ class StdProtocolRequest
 /*******************************************/
 {
 public:
+	StdProtocolRequest();
 	void assignReply(StdProtocolReply *assignedReply) { reply = assignedReply; }
 	void clear(void);
 	void addByte(u8 newByte);
@@ -54,10 +57,10 @@ private:
 	};
 	typedef enum {
 		WAITING_START_BYTE,
-		WAITING_MSG_LEN_MSB,
-		WAITING_MSG_LEN_LSB,
-		WAITING_MSG_CNT_MSB,
-		WAITING_MSG_CNT_LSB,
+		WAITING_MSG_LEN_1,
+		WAITING_MSG_LEN_2,
+		WAITING_MSG_CNT_1,
+		WAITING_MSG_CNT_2,
 		WAITING_MSG_BODY
 	} msgState_t;
 	msgState_t msgState;
@@ -75,6 +78,8 @@ private:
 	StdProtocolReply *reply;
 	masterInterface_t masterInterface;
 	u8 nrOfDummyBytes;
+	system_tick_t byteToByteDelay;
+	system_tick_t lastByteArrival;
 };
 
 

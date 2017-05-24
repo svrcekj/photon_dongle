@@ -18,6 +18,38 @@ extern ComMaster comMaster;
 
 u8 readData[1024 + NR_OF_DUMMY_BYTES];
 
+void blink_led(int count)
+{
+	while (count--)
+	{
+		RGB.color(0,0,255);
+		delay(50);
+		RGB.color(255,0,0);
+		delay(50);
+		RGB.color(255,255,255);
+		delay(50);
+		RGB.color(0);
+		delay(200);
+	}
+	delay(1500);
+}
+
+StdProtocolRequest::StdProtocolRequest()
+{
+	writeIndex = 0;
+	readIndex = 0;
+	completed = false;
+	msgState = WAITING_START_BYTE;
+	msgCounter = 0;
+	declaredLength = 0;
+	receivedLength = 0;
+	reply = NULL;
+	masterInterface = DEFAULT_MASTER_INTERFACE;
+	nrOfDummyBytes = 0;
+	byteToByteDelay = 0;
+	lastByteArrival = 0;
+}
+
 void StdProtocolRequest::clear(void)
 {
 	writeIndex = 0;
@@ -28,29 +60,52 @@ void StdProtocolRequest::clear(void)
 
 void StdProtocolRequest::addByte(u8 newByte)
 {
+	// check the delay between received bytes only when not waiting the start byte
+	if (msgState != WAITING_START_BYTE)
+	{
+		system_tick_t t_now = millis();
+		byteToByteDelay = millis() - lastByteArrival;
+/*
+		USBSerial1.write(t_now>>24);
+		USBSerial1.write(t_now>>16);
+		USBSerial1.write(t_now>>8);
+		USBSerial1.write(t_now);
+		USBSerial1.write(byteToByteDelay>>24);
+		USBSerial1.write(byteToByteDelay>>16);
+		USBSerial1.write(byteToByteDelay>>8);
+		USBSerial1.write(byteToByteDelay);
+*/
+		if (byteToByteDelay > BYTE_TO_BYTE_MAX_DELAY)
+			clear();
+	}
+
+	lastByteArrival = millis();
+
+	//USBSerial1.write(msgState);
+
 	switch (msgState)
 	{
 	case WAITING_START_BYTE:
 		if (newByte == STD_PROTOCOL_START_BYTE)
-			msgState = WAITING_MSG_LEN_LSB;
+			msgState = WAITING_MSG_LEN_1;
 		break;
 
-	case WAITING_MSG_LEN_MSB:
+	case WAITING_MSG_LEN_1:
 		declaredLength = newByte << 8;
-		msgState = WAITING_MSG_LEN_LSB;
+		msgState = WAITING_MSG_LEN_2;
 		break;
 
-	case WAITING_MSG_LEN_LSB:
+	case WAITING_MSG_LEN_2:
 		declaredLength += newByte;
-		msgState = WAITING_MSG_CNT_MSB;
+		msgState = WAITING_MSG_CNT_1;
 		break;
 
-	case WAITING_MSG_CNT_MSB:
+	case WAITING_MSG_CNT_1:
 		msgCounter = newByte << 8;
-		msgState = WAITING_MSG_CNT_LSB;
+		msgState = WAITING_MSG_CNT_2;
 		break;
 
-	case WAITING_MSG_CNT_LSB:
+	case WAITING_MSG_CNT_2:
 		msgCounter += newByte;
 		msgState = WAITING_MSG_BODY;
 		receivedLength = 5;
@@ -58,7 +113,7 @@ void StdProtocolRequest::addByte(u8 newByte)
 		break;
 
 	case WAITING_MSG_BODY:
-		if (receivedLength < declaredLength)
+		if (receivedLength < (declaredLength - 1))
 		{
 			if (writeIndex < REQUEST_MSG_MAX_SIZE)
 			{
@@ -90,15 +145,14 @@ void StdProtocolRequest::addByte(u8 newByte)
 
 void StdProtocolRequest::processNew(TDongleState* dongleState)
 {
-	ProtocolAction action = (ProtocolAction)dequeue16(NUMBER_FORMAT_BIG_ENDIAN);
 	reply->init(masterInterface, msgCounter);
 
-	switch ((u16)action)
+	switch (getAction())
 	{
 	case ACTION_WRITE:
 	{
-		u8 * writeData = data;
-		const int writeLen = writeIndex - 2; // payload size without Action size
+		u8 * writeData = data+2; // Skip The Action field
+		const u16 writeLen = writeIndex - 2; // payload size without Action size
 		comMaster.writeN(writeData, writeLen);
 		reply->sendWriteStatus(0);
 		break;
@@ -166,3 +220,5 @@ ProtocolAction StdProtocolRequest::getAction(void)
 {
 	return (ProtocolAction) (data[ACTION_POS] + (data[ACTION_POS+1] >> 8));
 }
+
+

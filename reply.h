@@ -24,10 +24,9 @@ class StdProtocolReply
 public:
 	void assignRequest(StdProtocolRequest *req) {request = req;}
 	void init(masterInterface_t ifaceType, u16 msgCounter);
-	void setCounterField(u16 counter);
 	void addByte(u8 newByte);
 	void addData(u8 *newData, int len);
-	void addField(u16 position, u16 field);
+	void setField(u16 position, u16 field);
 	void send(void);
 	void send(u8 *dataToSent, int len);
 	void sendWriteStatus(u16 status);
@@ -42,7 +41,8 @@ private:
 		MSG_SIZE_POS = 1,
 		COUNTER_POS = 3,
 		ACTION_POS = 5,
-		ERROR_POS = 7
+		ERROR_POS = 7,
+		PAYLOAD_POS = 9
 	};
 	StdProtocolRequest *request;
 	void finalize(void);
