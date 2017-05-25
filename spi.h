@@ -28,6 +28,7 @@ void Spi_BeginTx(void);
 void Spi_EndTx(void);
 void Spi_BeginRx(void);
 void Spi_EndRx(void);
+void Spi_EnableAndBeginRx(void);
 u8 Spi_ReadByteFromActiveChannel(void);
 void Spi_WriteByteToActiveChannel(u8 b);
 void Spi_ReadByDma(u8* data, int len);

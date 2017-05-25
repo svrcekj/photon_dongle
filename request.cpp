@@ -48,6 +48,7 @@ StdProtocolRequest::StdProtocolRequest()
 	nrOfDummyBytes = 0;
 	byteToByteDelay = 0;
 	lastByteArrival = 0;
+	msgAction = 0;
 }
 
 void StdProtocolRequest::clear(void)
@@ -147,15 +148,19 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 	   0    1   2   3    4    5    6    7  ......... LEN-1     LEN
 
 	Write: (12 bytes = 8 + 4)
+
+             	 	   data[0]
+	                     |
+	                     V
 	7B 00 0C FF FF 00 01 B6 00 23 01 7D
 	7B 00 0A FF FF 00 01 00 00 7D .......... reply
 
 	Read: (10 bytes)
 	7B 00 0B FF FF 00 02 00 04 00 7D
-	7B 00 0E FF FF 00 02 AA BB CC DD 7D ..... reply
+	7B 00 0E FF FF 00 02 00 00 AA BB CC DD 7D ..... reply
 
 	WriteRead: (14 bytes)
-	7B 00 0E FF FF 00 03 B6 00 07 00 02 01 7D
+	7B 00 0E FF FF 00 03 B4 00 07 00 02 01 7D
 	7B 00 0B FF FF 00 02 AA BB CC 7D  .... reply
 
 
@@ -166,33 +171,44 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 
 	completed = false;
 	reply->init(masterInterface, msgCounter);
-	USBSerial1.write(msgAction>>8);
-	USBSerial1.write(msgAction);
 
 	switch (msgAction)
 	{
 	case ACTION_WRITE:
 	{
-		comMaster.writeN(data+2, writeIndex-2);
+		u16 writeLength = receivedLength - 8;
+		comMaster.writeN(data, writeLength);
 		reply->sendWriteStatus(0);
 		break;
 	}
 	case ACTION_READ:
 	{
-		comMaster.readN(readData, getReadLength());
-		reply->setPayloadData(readData, getReadLength());
+
+		u16 readLength = getField(0); // READ_LEN_POS
+		u8 nrOfDummies = data[2];
+		//USBSerial1.write(readLength>>8);
+		//USBSerial1.write(readLength);
+		//USBSerial1.write(nrOfDummies);
+		comMaster.readN(readData, readLength + nrOfDummies);
+		reply->setPayloadData(readData + nrOfDummies, readLength);
 		reply->send();
 		break;
 	}
 	case ACTION_WRITE_READ:
-		comMaster.writeNReadN(data+2, writeIndex-2, readData, getReadLength());
-		reply->setPayloadData(readData, getReadLength());
+	{
+		u16 writeLength = receivedLength - 10;
+		u16 readLength = getField(receivedLength - 10);
+		u16 nrOfDummies = data[receivedLength - 8];
+		comMaster.writeNReadN(data, writeLength, readData, readLength + nrOfDummies);
+		reply->setPayloadData(readData + nrOfDummies, readLength);
+		reply->send();
 		break;
-
+	}
 	case ACTION_GET_VERSION:
+	{
 		reply->sendFwVersion(0xABCD);
 		break;
-
+	}
 	default:
 		break;
 	}
@@ -202,6 +218,7 @@ u8 StdProtocolRequest::dequeue8(void)
 {
 	if (readIndex < REQUEST_MSG_MAX_SIZE)
 		return data[readIndex++];
+
 	return 0;
 }
 
@@ -209,6 +226,7 @@ u16 StdProtocolRequest::dequeue16(EndianFormat endianFormat)
 {
 	if (readIndex > REQUEST_MSG_MAX_SIZE)
 		return 0;
+
 	readIndex += 2;
 	if (endianFormat == NUMBER_FORMAT_LITTLE_ENDIAN)
 	{
@@ -224,6 +242,7 @@ u32 StdProtocolRequest::dequeue32(EndianFormat endianFormat)
 {
 	if (readIndex+2 > REQUEST_MSG_MAX_SIZE)
 		return 0;
+
 	readIndex += 4;
 	if (endianFormat == NUMBER_FORMAT_LITTLE_ENDIAN)
 	{
@@ -235,10 +254,19 @@ u32 StdProtocolRequest::dequeue32(EndianFormat endianFormat)
 	}
 }
 
+/*
 u16 StdProtocolRequest::getReadLength(void)
 {
 	return getField(READ_LEN_POS);
 }
+*/
+
+/*
+u16 StdProtocolRequest::getWriteLength(void)
+{
+	return receivedLength - 11;
+}
+*/
 
 ProtocolAction StdProtocolRequest::getAction(void)
 {

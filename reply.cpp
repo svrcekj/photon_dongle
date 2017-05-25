@@ -15,9 +15,10 @@ extern TDongleState dongleState;
 void StdProtocolReply::init(masterInterface_t ifaceType, u16 msgCounter)
 {
 	data[0] = START_BYTE;;
-	writeIndex = 7;
+	writeIndex = PAYLOAD_POS;
 	masterInterface = ifaceType;
 	setField(COUNTER_POS, msgCounter);
+	setField(ERROR_POS, 0); // No error by default
 }
 
 void StdProtocolReply::addByte(u8 newByte)
@@ -62,7 +63,7 @@ void StdProtocolReply::send(u8 *dataToSent, int len)
 
 void StdProtocolReply::sendWriteStatus(u16 status)
 {
-	setField(ACTION_POS, (u16) request->getAction());
+	//setField(ACTION_POS, (u16) request->getAction());
 	setField(ERROR_POS, status);
 	writeIndex = PAYLOAD_POS;
 	send();
@@ -70,9 +71,11 @@ void StdProtocolReply::sendWriteStatus(u16 status)
 
 void StdProtocolReply::sendFwVersion(u16 version)
 {
-	setField(ACTION_POS, (u16) request->getAction());
-	setField(ERROR_POS, 0);
-	writeIndex = PAYLOAD_POS;
+	//setField(ACTION_POS, (u16) request->getAction());
+	//setField(ERROR_POS, 0);
+	//writeIndex = PAYLOAD_POS;
+	addByte(version >> 8);
+	addByte(version);
 	send();
 }
 
@@ -84,6 +87,7 @@ void StdProtocolReply::setField(u16 position, u16 field)
 
 void StdProtocolReply::finalize(void)
 {
+	setField(ACTION_POS, (u16) request->getAction());
 	if (writeIndex < REPLY_MSG_MAX_SIZE)
 	{
 		setField(MSG_SIZE_POS, writeIndex+1);
@@ -94,10 +98,15 @@ void StdProtocolReply::finalize(void)
 void StdProtocolReply::setPayloadData(u8* payload, int len)
 {
 #if USE_SAFE_COPY
-	writeIndex = 7;
+	writeIndex = PAYLOAD_POS;
 	addData(payload, len);
 #else
-	memcpy(data+7, payload, len);
-	writeIndex = 7 + len;
+	memcpy(data+PAYLOAD_POS, payload, len);
+	writeIndex = PAYLOAD_POS + len;
 #endif
+}
+
+void StdProtocolReply::setErrorCode(u16 err)
+{
+	setField(ERROR_POS, err);
 }

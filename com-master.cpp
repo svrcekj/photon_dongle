@@ -169,7 +169,7 @@ void ComMaster::write1ReadN(u8 b1, u8* readData, int readLen)
 	beginTx();
 	writeByteToActiveChannel(b1);
 	beginRx();
-	readN(readData, readLen);
+	ReadAfterWrite(readData, readLen);
 	endRx();
 }
 
@@ -185,7 +185,7 @@ void ComMaster::write2ReadN(u8 b1, u8 b2, u8* readData, int readLen)
 	writeByteToActiveChannel(b1);
 	writeByteToActiveChannel(b2);
 	beginRx();
-	readN(readData, readLen);
+	ReadAfterWrite(readData, readLen);
 	endRx();
 }
 
@@ -202,7 +202,7 @@ void ComMaster::write3ReadN(u8 b1, u8 b2, u8 b3, u8* readData, int readLen)
 	writeByteToActiveChannel(b2);
 	writeByteToActiveChannel(b3);
 	beginRx();
-	readN(readData, readLen);
+	ReadAfterWrite(readData, readLen);
 	endRx();
 }
 
@@ -221,7 +221,7 @@ void ComMaster::write5ReadN(u8 b1, u8 b2, u8 b3, u8 b4, u8 b5, u8* readData, int
 	writeByteToActiveChannel(b4);
 	writeByteToActiveChannel(b5);
 	beginRx();
-	readN(readData, readLen);
+	ReadAfterWrite(readData, readLen);
 	endRx();
 }
 
@@ -239,14 +239,33 @@ void ComMaster::writeNReadN(u8 *writeData, int writeLen, u8* readData, int readL
 		writeByteToActiveChannel(writeData[i]);
 	}
 	beginRx();
-	readN(readData, readLen);
+	ReadAfterWrite(readData, readLen);
 	endRx();
 }
 
 /***********************************************
 * Receives data from serial link
+* (even if no write operation called before)
 ************************************************/
 void ComMaster::readN(u8* data, int len)
+{
+	if (slave_mode == SLAVE_MODE_SPI)
+	{
+		Spi_EnableAndBeginRx();
+	}
+	else
+	{
+		// no action needed
+	}
+	ReadAfterWrite(data, len);
+	endRx();
+}
+
+/***********************************************
+* Receives data from serial link
+* (write operation must be issued before calling this funtion)
+************************************************/
+void ComMaster::ReadAfterWrite(u8* data, int len)
 {
 	if (slave_mode == SLAVE_MODE_SPI)
 	{

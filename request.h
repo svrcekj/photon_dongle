@@ -47,7 +47,8 @@ public:
 	u8 dequeue8(void);
 	u16 dequeue16(EndianFormat endianFormat);
 	u32 dequeue32(EndianFormat endianFormat);
-	u16 getReadLength(void);
+	//u16 getReadLength(void);
+	//u16 getWriteLength(void);
 	void setNrOfDummyBytes(u8 dummyBytes) {nrOfDummyBytes = dummyBytes;}
 private:
 	enum {
@@ -58,7 +59,7 @@ private:
 		ERROR_POS = 7
 	};
 	enum {
-		READ_LEN_POS = 7
+		READ_LEN_POS = 0
 	};
 	typedef enum {
 		WAITING_START_BYTE,

@@ -207,6 +207,20 @@ void Spi_BeginRx()
 	SET_SPI_RX;
 }
 
+/*********************************/
+void Spi_EnableAndBeginRx()
+/*********************************/
+{
+	//WAIT_FOR_TX_DONE;
+	//WAIT_FOR_SPI_READY; // wait for last byte fully transmitted
+	//Spi_FlushRxBuffer();
+	delayMicroseconds(1);
+	SET_SPI_RX;
+	CS_DOWN; // SPI_CS low starts the SPI transaction
+	delayMicroseconds(5);
+	ENABLE_SPI;
+}
+
 /******************/
 void Spi_EndRx()
 /******************/

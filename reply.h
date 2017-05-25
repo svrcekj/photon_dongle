@@ -33,6 +33,7 @@ public:
 	void sendFwVersion(u16 version);
 	void setNrOfDummyBytes(u8 dummyBytes) {nrOfDummyBytes = dummyBytes;}
 	void setPayloadData(u8 *payload, int len);
+	void setErrorCode(u16 err);
 private:
 	enum {
 		START_BYTE = '{',
