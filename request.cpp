@@ -143,6 +143,11 @@ void StdProtocolRequest::addByte(u8 newByte)
 
 void StdProtocolRequest::processNew(TDongleState* dongleState)
 {
+	if ((msgAction > 0) && (msgAction < 5))
+		dongleState->command_type = GOOD_COMMAND;
+	else
+		dongleState->command_type = BAD_COMMAND;
+
 /*
 	<START> <SIZE> <COUNTER> <ACTION> <PAYLOAD ..... PAYLOAD> <END>
 	   0    1   2   3    4    5    6    7  ......... LEN-1     LEN
@@ -183,7 +188,6 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 	}
 	case ACTION_READ:
 	{
-
 		u16 readLength = getField(0); // READ_LEN_POS
 		u8 nrOfDummies = data[2];
 		//USBSerial1.write(readLength>>8);

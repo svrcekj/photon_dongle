@@ -26,7 +26,7 @@
 
 #define FORCE_NRST_LOW      		1
 #define USE_RSTB_HW_RESET			1
-#define DO_NOT_USE_WIFI				1
+#define DO_NOT_USE_WIFI				0
 #define BUTTON_RECOVERS_PHOTON		0
 
 #define DEFAULT_SLAVE_MODE  		SLAVE_MODE_SPI
