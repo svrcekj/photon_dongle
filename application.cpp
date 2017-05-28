@@ -32,9 +32,6 @@
 const int rows = ROWS;
 const int cols = COLS;
 
-bool wifiSuspended = true;
-
-
 TCPServer server = TCPServer(SERVER_PORT);
 TCPClient client = TCPClient(SERVER_PORT);
 
@@ -57,22 +54,19 @@ StdProtocolReply *wifiReply = &staticWifiReply;
 
 TDongleState dongleState;
 
+bool single_click, double_click, tripple_click;
+
 /*-----------------------------------------------------------------------------------------------*/
 
 SYSTEM_MODE(MANUAL);
 
 /*-----------------------------------------------------------------------------------------------*/
-void Main_ProcessSwitchToUsbMode();
-void Main_ProcessSwitchToWifiMode();
-void Main_ProcessSwitchToSpiMode();
-void Main_ProcessSwitchToI2cMode();
-slave_mode_t Main_ProcessToggleSlaveMode();
-void Main_ProcessToggleWifiOnOff();
-void Main_ProcessEnableInterrupts();
-void Main_ProcessDisableInterrupts();
-void Main_RecoverPhoton();
+void switchToSpiMode();
+void switchToI2cMode();
+slave_mode_t toggleSlaveMode();
 void initObjects();
-
+void WifiOn();
+void WifiOff();
 void button_handler(system_event_t event, int duration, void* );
 
 
@@ -107,26 +101,17 @@ void button_handler(system_event_t event, int duration, void* );
 
 	USBSerial1.begin(DUMMY_VCP_SPEED);
 
+	WifiOff();
 
-	if (wifiSuspended)
-	{
-		WiFi.off();
-		Led_TakeControllOfRgb();
-	}
-	else
-	{
+/*
 #if DO_NOT_USE_WIFI
-		WiFi.off();
+	wifiSuspended = true;
+	WifiOff();
 #else
-		WiFi.on();
-		WiFi.connect();
-		WiFi.useDynamicIP();
-		myIP = WiFi.localIP();
-		server.begin();
+	wifiSuspended = false;
+	WifiOn();
 #endif
-		Led_GiveBackControllOfRgb();
-	}
-
+*/
 	System.on(button_status, button_handler);
 }
 
@@ -165,31 +150,32 @@ void button_handler(system_event_t event, int duration, void* );
 	//-------------------
 	// Button management
 	//-------------------
-	// NOTE: Part of button_handler()
-	if (System.buttonPushed() > 2000)
-	{
-		RGB.color(255, 255, 0); // Yellow
-		Led_Toggle(ONBOARD_LED);
-		delay(50);
-		if (System.buttonPushed() > 3000)
-			System.dfu();
+	// NOTE: single, double and tripple click detection
+	// is part of a button_handler() routine
 
-		while (System.buttonPushed() > 1000)
+	if (tripple_click == true)
+	{
+		System.dfu();
+		tripple_click = false;
+	}
+	else if (double_click == true)
+	{
+		delay(1000);
+		if (tripple_click == false)
 		{
-			; // do nothing, waiting for button release
+			WifiOn();
+			double_click = false;
 		}
 	}
-	else if (System.buttonPushed() > 0)
+	else if (single_click == true)
 	{
-		RGB.color(0, 0, 0); // Gray
+		toggleSlaveMode();
+		single_click = false;
 	}
-	else
-	{
-		//-------------------
-		// LED management
-		//-------------------
-		Led_ManageAll(&dongleState);
-	}
+	//-------------------
+	// LED management
+	//-------------------
+	Led_ManageAll(&dongleState);
 }
 
 //==============================================================================================================================
@@ -198,33 +184,31 @@ void button_handler(system_event_t event, int duration, void* );
 
 void button_handler(system_event_t event, int duration, void* )
 {
-	static system_tick_t prev_release;
-	system_tick_t last_release;
-	system_tick_t time_between;
-	bool double_click;
+	static system_tick_t press1;
+	static system_tick_t delta01, delta12;
 
-    if (!duration) // just pressed
-    {
-        RGB.color(0, 0, 0); // Gray
-    }
-    else // just released
-    {
-    	last_release = millis();
-    	time_between = last_release - prev_release;
-    	prev_release = last_release;
+	if (duration == 0) // button just pressed
+	{
+		delta01 = millis() - press1;
+		press1 = millis();
 
-   		double_click = time_between > 200 ? false : true;
+/*
+		single_click = false;
+		double_click = false;
+		tripple_click = false;
+*/
 
-   		if (double_click)
-   		{
-   			Main_ProcessToggleWifiOnOff();
-   		}
-   		else
-   		{
-   			Main_ProcessToggleSlaveMode();
-   		}
-    }
+		if ((delta01 < 200) && (delta12 < 200))
+			tripple_click = true;
+		else if (delta01 < 200)
+			double_click = true;
+		else
+			single_click = true;
+
+		delta12 = delta01;
+	}
 }
+
 
 /***********************************************/
 void initObjects(void) // Software initialization
@@ -269,30 +253,7 @@ void initObjects(void) // Software initialization
 }
 
 /***********************************************/
-void Main_ProcessSwitchToUsbMode()
-/***********************************************/
-{
-	USBSerial1.begin(DUMMY_VCP_SPEED);
-	WiFi.off();
-	Led_TakeControllOfRgb();
-	RGB.color(255,255,255);
-}
-
-/***********************************************/
-void Main_ProcessSwitchToWifiMode()
-/***********************************************/
-{
-	USBSerial1.end();
-	Led_GiveBackControllOfRgb();
-
-	WiFi.on();
-	WiFi.connect();
-	WiFi.useDynamicIP();
-	myIP = WiFi.localIP();
-}
-
-/***********************************************/
-void Main_ProcessSwitchToSpiMode()
+void switchToSpiMode()
 /***********************************************/
 {
 	dongleState.slave_mode = SLAVE_MODE_SPI;
@@ -301,7 +262,7 @@ void Main_ProcessSwitchToSpiMode()
 }
 
 /***********************************************/
-void Main_ProcessSwitchToI2cMode()
+void switchToI2cMode()
 /***********************************************/
 {
 	dongleState.slave_mode = SLAVE_MODE_I2C;
@@ -310,79 +271,50 @@ void Main_ProcessSwitchToI2cMode()
 }
 
 /***********************************************/
-slave_mode_t Main_ProcessToggleSlaveMode()
+slave_mode_t toggleSlaveMode()
 /***********************************************/
 {
 	if (dongleState.slave_mode == SLAVE_MODE_SPI)
 	{
-		Main_ProcessSwitchToI2cMode();
+		switchToI2cMode();
 		return SLAVE_MODE_I2C;
 	}
 	else
 	{
-		Main_ProcessSwitchToSpiMode();
+		switchToSpiMode();
 		return SLAVE_MODE_SPI;
 	}
 }
 
 /***********************************************/
-void Main_ProcessToggleWifiOnOff()
+void WifiOn()
 /***********************************************/
 {
-	if (wifiSuspended)
-	{
-		Led_GiveBackControllOfRgb();
-		WiFi.on();
-		WiFi.connect();
-		WiFi.useDynamicIP();
-		myIP = WiFi.localIP();
-		wifiSuspended = false;
-	}
-	else
-	{
-		WiFi.off();
-		Led_TakeControllOfRgb();
-		wifiSuspended = true;
-	}
-}
-
-
-/***********************************************/
-void Main_ProcessEnableInterrupts()
-/***********************************************/
-{
-
-}
-
-/***********************************************/
-void Main_ProcessDisableInterrupts()
-/***********************************************/
-{
-
-}
-
-/***********************************************/
-void Main_RecoverPhoton()
-/***********************************************/
-{
-	Led_TakeControllOfRgb();
-	USBSerial1.end();
-
-#if FORCE_NRST_LOW
-	HwSpecific_ForceNrstPinLow();
-#endif
-	HwSpecific_ForceModePin(dongleState.slave_mode);
-
-	Led_Configure();
-	Led_Blink(10);
 	Led_GiveBackControllOfRgb();
-
-	dongleState.slave_mode = SLAVE_MODE_SPI;
-	dongleState.spiSpeed = Spi_Configure(DEFAULT_SPI_SPEED, &dongleState);
-
 	WiFi.on();
-	WiFi.connect();
+	WiFiAccessPoint ap[5];
+
+	int nrOfRecords = WiFi.getCredentials(ap, 5);
+
+	bool ssid_found = false;
+
+	for (int i = 0; i < nrOfRecords; ++i)
+		if (String(ap[i].ssid).compareTo("PhotonSpace") == 0)
+			ssid_found = true;
+
+	if (!ssid_found)
+		WiFi.setCredentials("PhotonSpace", "universe", WPA2, WLAN_CIPHER_AES);
+
+	WiFi.connect(WIFI_CONNECT_SKIP_LISTEN);
 	WiFi.useDynamicIP();
 	myIP = WiFi.localIP();
-	USBSerial1.begin(DUMMY_VCP_SPEED);
+
+}
+
+/***********************************************/
+void WifiOff()
+/***********************************************/
+{
+	WiFi.off();
+	Led_TakeControllOfRgb();
 }

@@ -16,6 +16,9 @@
 //extern TDongleState dongleState;
 extern ComMaster comMaster;
 
+void WifiOn();
+void WifiOff();
+
 u8 readData[1024 + NR_OF_DUMMY_BYTES];
 
 void blink_led(int count)
@@ -143,11 +146,6 @@ void StdProtocolRequest::addByte(u8 newByte)
 
 void StdProtocolRequest::processNew(TDongleState* dongleState)
 {
-	if ((msgAction > 0) && (msgAction < 5))
-		dongleState->command_type = GOOD_COMMAND;
-	else
-		dongleState->command_type = BAD_COMMAND;
-
 /*
 	<START> <SIZE> <COUNTER> <ACTION> <PAYLOAD ..... PAYLOAD> <END>
 	   0    1   2   3    4    5    6    7  ......... LEN-1     LEN
@@ -176,45 +174,75 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 
 	completed = false;
 	reply->init(masterInterface, msgCounter);
+	dongleState->command_type = GOOD_COMMAND;
 
 	switch (msgAction)
 	{
-	case ACTION_WRITE:
-	{
-		u16 writeLength = receivedLength - 8;
-		comMaster.writeN(data, writeLength);
-		reply->sendWriteStatus(0);
-		break;
-	}
-	case ACTION_READ:
-	{
-		u16 readLength = getField(0); // READ_LEN_POS
-		u8 nrOfDummies = data[2];
-		//USBSerial1.write(readLength>>8);
-		//USBSerial1.write(readLength);
-		//USBSerial1.write(nrOfDummies);
-		comMaster.readN(readData, readLength + nrOfDummies);
-		reply->setPayloadData(readData + nrOfDummies, readLength);
-		reply->send();
-		break;
-	}
-	case ACTION_WRITE_READ:
-	{
-		u16 writeLength = receivedLength - 10;
-		u16 readLength = getField(receivedLength - 10);
-		u16 nrOfDummies = data[receivedLength - 8];
-		comMaster.writeNReadN(data, writeLength, readData, readLength + nrOfDummies);
-		reply->setPayloadData(readData + nrOfDummies, readLength);
-		reply->send();
-		break;
-	}
-	case ACTION_GET_VERSION:
-	{
-		reply->sendFwVersion(0xABCD);
-		break;
-	}
-	default:
-		break;
+		case ACTION_WRITE:
+		{
+			u16 writeLength = receivedLength - 8;
+			comMaster.writeN(data, writeLength);
+			reply->sendWriteStatus(0);
+			break;
+		}
+		case ACTION_READ:
+		{
+			u16 readLength = getField(0); // READ_LEN_POS
+			u8 nrOfDummies = data[2];
+			//USBSerial1.write(readLength>>8);
+			//USBSerial1.write(readLength);
+			//USBSerial1.write(nrOfDummies);
+			comMaster.readN(readData, readLength + nrOfDummies);
+			reply->setPayloadData(readData + nrOfDummies, readLength);
+			reply->send();
+			break;
+		}
+		case ACTION_WRITE_READ:
+		{
+			u16 writeLength = receivedLength - 10;
+			u16 readLength = getField(receivedLength - 10);
+			u16 nrOfDummies = data[receivedLength - 8];
+			comMaster.writeNReadN(data, writeLength, readData, readLength + nrOfDummies);
+			reply->setPayloadData(readData + nrOfDummies, readLength);
+			reply->send();
+			break;
+		}
+		case ACTION_GET_VERSION:
+		{
+			reply->sendFwVersion(0xABCD);
+			break;
+		}
+		case ACTION_ENTER_DFU: // 7B 00 0E FF FF DF DF AA BB CC DD EE FF 7D
+		{
+			if ((data[0] == 0xAA) && (data[1] == 0xBB) && (data[2] == 0xCC) &&
+				(data[3] == 0xDD) && (data[4] == 0xEE) && (data[5] == 0xFF) )
+				System.dfu();
+			break;
+		}
+		case ACTION_WIFI_CTRL: // 7B 00 0E FF FF 11 11 <CTRL_CMD> 7D
+		{
+			switch (data[0])
+			{
+			case 0x00:
+				WifiOn();
+				break;
+			case 0x01:
+				WifiOff();
+				break;
+			case 0x02:
+				System.dfu();
+				break;
+			case 0x03:
+				System.reset();
+				break;
+			default:
+				break;
+			}
+			break;
+		}
+		default:
+			dongleState->command_type = BAD_COMMAND;
+			break;
 	}
 }
 

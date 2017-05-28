@@ -123,6 +123,8 @@ typedef enum {
     ACTION_READ         = (uint16_t)0x0002U,
     ACTION_WRITE_READ   = (uint16_t)0x0003U,
     ACTION_GET_VERSION  = (uint16_t)0x0004U,
+	ACTION_ENTER_DFU	= (uint16_t)0xDFDFU,
+	ACTION_WIFI_CTRL	= (uint16_t)0x1111U
 } ProtocolAction;
 
 typedef enum {
