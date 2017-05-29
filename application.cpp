@@ -123,17 +123,24 @@ void button_handler(system_event_t event, int duration, void* );
 	//---------------------------------
 	// Process WiFi incomming message
 	//---------------------------------
-	if (int dataWaiting = client.available() > 0)
-		for (int i = 0; i < dataWaiting; ++i)
-			wifiRequest->addByte(client.read());
+	if (dongleState.wifi_active && WiFi.ready())
+	{
+		if (int dataWaiting = client.available() > 0)
+			for (int i = 0; i < dataWaiting; ++i)
+				wifiRequest->addByte(client.read());
 
-	if (wifiRequest->isCompleted())
-		wifiRequest->processNew(&dongleState);
+		if (wifiRequest->isCompleted())
+			wifiRequest->processNew(&dongleState);
 
-	if (!client.connected())
-		client = server.available();
+		if (!client.connected())
+			client = server.available();
 
-	dongleState.tcp_port_state = client.connected() ? PORT_OPENED : PORT_CLOSED;
+		dongleState.tcp_port_state = client.connected() ? PORT_OPENED : PORT_CLOSED;
+	}
+	else if (dongleState.wifi_active && !WiFi.ready())
+	{
+		RGB.control(false);
+	}
 #endif
 
 	//---------------------------------------------
@@ -192,12 +199,6 @@ void button_handler(system_event_t event, int duration, void* )
 		delta01 = millis() - press1;
 		press1 = millis();
 
-/*
-		single_click = false;
-		double_click = false;
-		tripple_click = false;
-*/
-
 		if ((delta01 < 200) && (delta12 < 200))
 			tripple_click = true;
 		else if (delta01 < 200)
@@ -208,7 +209,6 @@ void button_handler(system_event_t event, int duration, void* )
 		delta12 = delta01;
 	}
 }
-
 
 /***********************************************/
 void initObjects(void) // Software initialization
@@ -230,6 +230,7 @@ void initObjects(void) // Software initialization
 	dongleState.wifi = WIFI_NOT_CONNECTED;
 	dongleState.tcp_port_state = PORT_CLOSED;
 	dongleState.vcp_port_state = PORT_CLOSED;
+	dongleState.wifi_active = false;
 
 	if (dongleState.msg_protocol == MSG_PROTOCOL_STANDARD_COM_MASTER)
 	{
@@ -290,8 +291,17 @@ slave_mode_t toggleSlaveMode()
 void WifiOn()
 /***********************************************/
 {
+	if (dongleState.wifi_active)
+	{
+		WiFi.off();
+		delay(1000);
+	}
+
 	Led_GiveBackControllOfRgb();
+	Led_On(ONBOARD_LED);
+	dongleState.wifi_active = true;
 	WiFi.on();
+
 	WiFiAccessPoint ap[5];
 
 	int nrOfRecords = WiFi.getCredentials(ap, 5);
@@ -303,12 +313,25 @@ void WifiOn()
 			ssid_found = true;
 
 	if (!ssid_found)
-		WiFi.setCredentials("PhotonSpace", "universe", WPA2, WLAN_CIPHER_AES);
+		WiFi.setCredentials("PhotonSpace", "universe");//, WPA2);// , WLAN_CIPHER_AES);
 
 	WiFi.connect(WIFI_CONNECT_SKIP_LISTEN);
-	WiFi.useDynamicIP();
-	myIP = WiFi.localIP();
+	while(WiFi.connecting())
+	{
 
+	}
+	WiFi.useDynamicIP();
+	while(WiFi.connecting())
+	{
+
+	}
+	//myIP = WiFi.localIP();
+	while (!WiFi.ready())
+	{
+
+	}
+	Led_TakeControllOfRgb();
+	Led_Off(ONBOARD_LED);
 }
 
 /***********************************************/
@@ -316,5 +339,6 @@ void WifiOff()
 /***********************************************/
 {
 	WiFi.off();
+	dongleState.wifi_active = false;
 	Led_TakeControllOfRgb();
 }

@@ -110,15 +110,11 @@ void Led_ManageAll(TDongleState *dongleState)
 	// Host command ok		:	slow blinking
 	// Host command error	:	fast blinking
 
+	u8 red_color = (dongleState->wifi_active == false) ? 0 : (millis() & 0x00000400) == 0 ? 0 : 255;
+	u8 green_color = dongleState->slave_mode == SLAVE_MODE_I2C ? 255 : 0;
+	u8 blue_color = dongleState->slave_mode == SLAVE_MODE_SPI ? 255 : 0;
 
-	if (dongleState->slave_mode == SLAVE_MODE_I2C)
-	{
-		RGB.color(0, 255, 0);
-	}
-	if (dongleState->slave_mode == SLAVE_MODE_SPI)
-	{
-		RGB.color(0, 0, 255);
-	}
+	RGB.color(red_color, green_color, blue_color);
 
 	if ((dongleState->tcp_port_state == PORT_CLOSED) && (dongleState->vcp_port_state == PORT_CLOSED))
 	{

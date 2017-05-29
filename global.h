@@ -137,6 +137,7 @@ typedef struct {
 	port_state_t tcp_port_state;
 	port_state_t vcp_port_state;
 	command_type_t command_type;
+	bool wifi_active;
 	master_mode_t master_mode;
 	slave_mode_t slave_mode;
 	msg_protocol_t msg_protocol;
