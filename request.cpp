@@ -88,7 +88,10 @@ void StdProtocolRequest::addByte(u8 newByte)
 
 	case WAITING_MSG_LEN_2:
 		declaredLength += newByte;
-		msgState = WAITING_MSG_CNT_1;
+		if (declaredLength < 8)
+			msgState = WAITING_START_BYTE; // the shortest message can by 8 bytes
+		else
+			msgState = WAITING_MSG_CNT_1;
 		break;
 
 	case WAITING_MSG_CNT_1:
@@ -114,12 +117,11 @@ void StdProtocolRequest::addByte(u8 newByte)
 		break;
 
 	case WAITING_PAYLOAD:
-		if (receivedLength < (declaredLength - 1))
+		if (++receivedLength < declaredLength)
 		{
 			if (writeIndex < REQUEST_MSG_MAX_SIZE)
 			{
 				data[writeIndex++] = newByte;
-				receivedLength++;
 			}
 		}
 		else // waiting END byte
@@ -174,37 +176,68 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 
 	completed = false;
 	reply->init(masterInterface, msgCounter);
-	dongleState->command_type = GOOD_COMMAND;
+	//dongleState->command_type = GOOD_COMMAND;
 
 	switch (msgAction)
 	{
 		case ACTION_WRITE:
 		{
 			u16 writeLength = receivedLength - 8;
-			comMaster.writeN(data, writeLength);
-			reply->sendWriteStatus(0);
+			if ((writeLength > 0) && (writeLength <= MAX_WRITE_LEN))
+			{
+				comMaster.writeN(data, writeLength);
+				reply->sendWriteStatus(STATUS_OK);
+				dongleState->command_type = GOOD_COMMAND;
+			}
+			else
+			{
+				reply->sendWriteStatus(STATUS_WRITE_LEN_ERROR);
+				dongleState->command_type = BAD_COMMAND;
+			}
 			break;
 		}
 		case ACTION_READ:
 		{
 			u16 readLength = getField(0); // READ_LEN_POS
-			u8 nrOfDummies = data[2];
-			//USBSerial1.write(readLength>>8);
-			//USBSerial1.write(readLength);
-			//USBSerial1.write(nrOfDummies);
-			comMaster.readN(readData, readLength + nrOfDummies);
-			reply->setPayloadData(readData + nrOfDummies, readLength);
-			reply->send();
+			u8 nrOfDummies = (u8) (data[2] > 0);
+			if ((readLength > 0) && (readLength <= MAX_READ_LEN))
+			{
+				comMaster.readN(readData, readLength + nrOfDummies);
+				reply->setPayloadData(readData + nrOfDummies, readLength);
+				reply->send();
+				dongleState->command_type = GOOD_COMMAND;
+			}
+			else
+			{
+				reply->sendWriteStatus(STATUS_READ_LEN_ERROR);
+				dongleState->command_type = BAD_COMMAND;
+			}
 			break;
 		}
 		case ACTION_WRITE_READ:
 		{
-			u16 writeLength = receivedLength - 10;
-			u16 readLength = getField(receivedLength - 10);
-			u16 nrOfDummies = data[receivedLength - 8];
+			u16 writeLength = receivedLength - 11;
+			if ((writeLength < 1) || (writeLength > MAX_WRITE_LEN))
+			{
+				reply->sendWriteStatus(STATUS_WRITE_LEN_ERROR);
+				dongleState->command_type = BAD_COMMAND;
+				return;
+			}
+
+			u16 readLength = getField(writeLength);
+			u16 nrOfDummies = (u8) (data[writeLength + 2] > 0);
+
+			if ((readLength < 1) || (readLength > MAX_READ_LEN))
+			{
+				reply->sendWriteStatus(STATUS_READ_LEN_ERROR);
+				dongleState->command_type = BAD_COMMAND;
+				return;
+			}
+
 			comMaster.writeNReadN(data, writeLength, readData, readLength + nrOfDummies);
 			reply->setPayloadData(readData + nrOfDummies, readLength);
 			reply->send();
+			dongleState->command_type = GOOD_COMMAND;
 			break;
 		}
 		case ACTION_GET_VERSION:
@@ -212,14 +245,43 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 			reply->sendFwVersion(0xABCD);
 			break;
 		}
-		case ACTION_ENTER_DFU: // 7B 00 0E FF FF DF DF AA BB CC DD EE FF 7D
+		case ACTION_GET_I2C_ADDRESS:
 		{
-			if ((data[0] == 0xAA) && (data[1] == 0xBB) && (data[2] == 0xCC) &&
-				(data[3] == 0xDD) && (data[4] == 0xEE) && (data[5] == 0xFF) )
-				System.dfu();
+			reply->addByte(dongleState->i2cAddress);
+			reply->send();
 			break;
 		}
-		case ACTION_WIFI_CTRL: // 7B 00 0E FF FF 11 11 <CTRL_CMD> 7D
+		case ACTION_SET_I2C_ADDRESS:
+		{
+			dongleState->i2cAddress = dequeue8();
+			reply->sendWriteStatus(STATUS_OK);
+			break;
+		}
+		case ACTION_GET_I2C_SPEED:
+		{
+			reply->addField32(dongleState->i2cSpeed);
+			reply->send();
+			break;
+		}
+		case ACTION_SET_I2C_SPEED:
+		{
+			dongleState->i2cSpeed = dequeue32(NUMBER_FORMAT_BIG_ENDIAN);
+			break;
+		}
+		case ACTION_GET_SPI_PRESCALLER:
+		{
+			reply->addByte((u8)(dongleState->slave_mode == SLAVE_MODE_SPI));
+			reply->addByte(dongleState->spiPrescaller);
+			reply->send();
+			break;
+		}
+		case ACTION_SET_SPI_PRESCALLER:
+		{
+			dongleState->spiPrescaller = dequeue8();
+			reply->sendWriteStatus(STATUS_OK);
+			break;
+		}
+		case ACTION_SYSTEM_CTRL: // 7B 00 0E FF FF 11 11 <CTRL_CMD> 7D
 		{
 			switch (data[0])
 			{
@@ -307,7 +369,10 @@ ProtocolAction StdProtocolRequest::getAction(void)
 
 u16 StdProtocolRequest::getField(u16 position)
 {
-	return ((data[position] << 8) + (data[position+1]));
+	if (position < REQUEST_MSG_MAX_SIZE - 2)
+		return (data[position] << 8) + data[position+1];
+	else
+		return 0;
 }
 
 /*void StdProtocolRequest::prepareDataToSend(u8* srcData, u16 len)

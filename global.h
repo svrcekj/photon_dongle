@@ -20,7 +20,10 @@
 
 #define SERVER_PORT					23
 
-#define MAX_READ_CNT 				4096
+//#define MAX_READ_CNT 				4096
+
+#define MAX_WRITE_LEN				256
+#define MAX_READ_LEN				256
 
 #define DEFAULT_CHUNK_SIZE  		512
 
@@ -34,8 +37,10 @@
 #define DEFAULT_MASTER_INTERFACE	MASTER_INTERFACE_USB
 #define DEFAULT_MSG_PROTOCOL		MSG_PROTOCOL_STANDARD_COM_MASTER
 
+/*
 #define	ROWS						24
 #define COLS						14
+*/
 
 #define DUMMY_VCP_SPEED				115200
 
@@ -94,6 +99,13 @@ typedef enum {
 } event_t;
 
 typedef enum {
+	STATUS_OK 					= 0x0000U,
+	STATUS_ERROR				= 0x0001U,
+	STATUS_WRITE_LEN_ERROR		= 0x0002U,
+	STATUS_READ_LEN_ERROR		= 0x0003U
+} stdReplyStatus_t;
+
+typedef enum {
 	PARSER_CMD_EXIT,
 	PARSER_CMD_DFU,
 	PARSER_CMD_SET_SPEED,
@@ -119,12 +131,19 @@ typedef enum {
 } cmd_t;
 
 typedef enum {
-    ACTION_WRITE        = (uint16_t)0x0001U,
-    ACTION_READ         = (uint16_t)0x0002U,
-    ACTION_WRITE_READ   = (uint16_t)0x0003U,
-    ACTION_GET_VERSION  = (uint16_t)0x0004U,
-	ACTION_ENTER_DFU	= (uint16_t)0xDFDFU,
-	ACTION_WIFI_CTRL	= (uint16_t)0x1111U
+    ACTION_WRITE        		= (uint16_t)0x0001U,
+    ACTION_READ         		= (uint16_t)0x0002U,
+    ACTION_WRITE_READ   		= (uint16_t)0x0003U,
+    ACTION_GET_VERSION  		= (uint16_t)0x0004U,
+	ACTION_GET_I2C_ADDRESS		= (uint16_t)0x0D00U,
+	ACTION_SET_I2C_ADDRESS		= (uint16_t)0x0D80U,
+	ACTION_GET_I2C_SPEED		= (uint16_t)0x0D01U,
+	ACTION_SET_I2C_SPEED		= (uint16_t)0x0D81U,
+	ACTION_GET_SPI_PRESCALLER	= (uint16_t)0x0D02U,
+	ACTION_SET_SPI_PRESCALLER	= (uint16_t)0x0D82U,
+	ACTION_GET_SPI_SPEED		= (uint16_t)0x0D03U,
+	ACTION_SET_SPI_SPEED		= (uint16_t)0x0D83U,
+	ACTION_SYSTEM_CTRL			= (uint16_t)0x1111U
 } ProtocolAction;
 
 typedef enum {
@@ -144,6 +163,7 @@ typedef struct {
 	u8 spiPrescaller;
 	u32 spiSpeed;
 	u32 i2cSpeed;
+	u8 i2cAddress;
 	u32 dataChunkSize;
 } TDongleState;
 

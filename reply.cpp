@@ -27,6 +27,26 @@ void StdProtocolReply::addByte(u8 newByte)
 		data[writeIndex++] = newByte;
 }
 
+void StdProtocolReply::addField(u16 field)
+{
+	if (writeIndex < (REPLY_MSG_MAX_SIZE-2))
+	{
+		data[writeIndex++] = field >> 8;
+		data[writeIndex++] = field;
+	}
+}
+
+void StdProtocolReply::addField32(u32 field)
+{
+	if (writeIndex < (REPLY_MSG_MAX_SIZE-4))
+	{
+		data[writeIndex++] = field >> 24;
+		data[writeIndex++] = field >> 16;
+		data[writeIndex++] = field >> 8;
+		data[writeIndex++] = field;
+	}
+}
+
 void StdProtocolReply::addData(u8* newData, int len)
 {
 	while (len--)

@@ -10,7 +10,10 @@
 
 #include <application.h>
 
-#define DEV_I2C_ADDRESS				0x48	// 7-bit address
+// 7-bit address (0100 1001 b), i.e.:
+// 10010010 = 0x92 for I2C write,
+// 10010011 = 0x93 for I2C read
+#define DEV_I2C_ADDRESS				0x49
 #define DEFAULT_I2C_SPEED   		400000	// MBauds
 #define MIN_I2C_SPEED	   		 	1000
 #define MAX_I2C_SPEED	    		400000

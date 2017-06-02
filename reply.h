@@ -25,6 +25,8 @@ public:
 	void assignRequest(StdProtocolRequest *req) {request = req;}
 	void init(masterInterface_t ifaceType, u16 msgCounter);
 	void addByte(u8 newByte);
+	void addField(u16 field);
+	void addField32(u32 field);
 	void addData(u8 *newData, int len);
 	void setField(u16 position, u16 field);
 	void send(void);
