@@ -9,7 +9,7 @@
 
 #include "com-master.h"
 
-#define BLINK_DURATION				600	// milliseconds
+#define BLINK_DURATION				400	// milliseconds
 #define BLINK_PERIOD				100	// milliseconds
 
 //system_tick_t com_timeout = 0;

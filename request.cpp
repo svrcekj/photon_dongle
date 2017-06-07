@@ -15,6 +15,7 @@
 
 //extern TDongleState dongleState;
 extern ComMaster comMaster;
+extern const u8 FIRMWARE_VERSION[];
 
 void WifiOn();
 void WifiOff();
@@ -176,7 +177,7 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 
 	completed = false;
 	reply->init(masterInterface, msgCounter);
-	//dongleState->command_type = GOOD_COMMAND;
+	dongleState->command_type = GOOD_COMMAND;
 
 	switch (msgAction)
 	{
@@ -187,7 +188,6 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 			{
 				comMaster.writeN(data, writeLength);
 				reply->sendWriteStatus(STATUS_OK);
-				dongleState->command_type = GOOD_COMMAND;
 			}
 			else
 			{
@@ -205,7 +205,6 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 				comMaster.readN(readData, readLength + nrOfDummies);
 				reply->setPayloadData(readData + nrOfDummies, readLength);
 				reply->send();
-				dongleState->command_type = GOOD_COMMAND;
 			}
 			else
 			{
@@ -237,12 +236,13 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 			comMaster.writeNReadN(data, writeLength, readData, readLength + nrOfDummies);
 			reply->setPayloadData(readData + nrOfDummies, readLength);
 			reply->send();
-			dongleState->command_type = GOOD_COMMAND;
 			break;
 		}
 		case ACTION_GET_VERSION:
 		{
-			reply->sendFwVersion(0xABCD);
+			u16 version = FIRMWARE_VERSION[0] << 8;
+			version += FIRMWARE_VERSION[1];
+			reply->sendFwVersion(version);
 			break;
 		}
 		case ACTION_GET_I2C_ADDRESS:
@@ -266,6 +266,7 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 		case ACTION_SET_I2C_SPEED:
 		{
 			dongleState->i2cSpeed = dequeue32(NUMBER_FORMAT_BIG_ENDIAN);
+			dongleState->command_type = GOOD_COMMAND;
 			break;
 		}
 		case ACTION_GET_SPI_PRESCALLER:

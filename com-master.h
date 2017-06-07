@@ -14,7 +14,7 @@
 class ComMaster {
 public:
 	ComMaster(slave_mode_t mode);
-	void setMode(slave_mode_t mode);
+	void setMode(slave_mode_t mode) {slave_mode = mode;}
 	void write1(u8 b1);
 	void write2(u8 b1, u8 b2);
 	void write3(u8 b1, u8 b2, u8 b3);

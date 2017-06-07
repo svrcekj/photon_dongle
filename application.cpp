@@ -169,7 +169,7 @@ void button_handler(system_event_t event, int duration, void* );
 	}
 	else if (double_click == true)
 	{
-		delay(1000);
+		delay(300);
 		if (tripple_click == false)
 		{
 			WifiOn();
@@ -261,8 +261,9 @@ void switchToSpiMode()
 /***********************************************/
 {
 	dongleState.slave_mode = SLAVE_MODE_SPI;
+	comMaster.setMode(SLAVE_MODE_SPI);
 	Spi_Configure(dongleState.spiSpeed, &dongleState);
-	chipApi.init(dongleState.slave_mode);
+	//chipApi.init(dongleState.slave_mode);
 }
 
 /***********************************************/
@@ -270,8 +271,22 @@ void switchToI2cMode()
 /***********************************************/
 {
 	dongleState.slave_mode = SLAVE_MODE_I2C;
+	comMaster.setMode(SLAVE_MODE_I2C);
 	I2c_Configure(dongleState.i2cSpeed);
-	chipApi.init(dongleState.slave_mode);
+/*
+	Wire.beginTransmission(DEV_I2C_ADDRESS);
+	Wire.write(0xB6);
+	Wire.write(0x00);
+	Wire.write(0x04);
+	Wire.endTransmission(stopBit=false);
+	Wire.requestFrom(DEV_I2C_ADDRESS, 7);
+	u8 b;
+	while (Wire.available())
+	{
+		b = Wire.read();
+	}
+*/
+	//chipApi.init(dongleState.slave_mode);
 }
 
 /***********************************************/
@@ -297,7 +312,7 @@ void WifiOn()
 	if (dongleState.wifi_active)
 	{
 		WiFi.off();
-		delay(1000);
+		delay(300);
 	}
 
 	Led_GiveBackControllOfRgb();

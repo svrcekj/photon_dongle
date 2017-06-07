@@ -83,7 +83,6 @@ void StdProtocolReply::send(u8 *dataToSent, int len)
 
 void StdProtocolReply::sendWriteStatus(u16 status)
 {
-	//setField(ACTION_POS, (u16) request->getAction());
 	setField(ERROR_POS, status);
 	writeIndex = PAYLOAD_POS;
 	send();
@@ -91,9 +90,6 @@ void StdProtocolReply::sendWriteStatus(u16 status)
 
 void StdProtocolReply::sendFwVersion(u16 version)
 {
-	//setField(ACTION_POS, (u16) request->getAction());
-	//setField(ERROR_POS, 0);
-	//writeIndex = PAYLOAD_POS;
 	addByte(version >> 8);
 	addByte(version);
 	send();

@@ -12,7 +12,6 @@
 #include "i2c.h"
 #include <application.h>
 
-
 /***********************************************/
 ComMaster::ComMaster(slave_mode_t mode)
 /***********************************************/
@@ -45,7 +44,7 @@ void ComMaster::endTx()
 	}
 	else
 	{
-		Wire.endTransmission();
+		//Wire.endTransmission();
 	}
 }
 
@@ -88,7 +87,7 @@ void ComMaster::writeByteToActiveChannel(u8 b)
 	}
 	else // I2C
 	{
-		I2c_WriteByteToActiveChannel(b);
+		I2c_WriteByteToActiveChannel(b, bytes_to_send);
 	}
 }
 
