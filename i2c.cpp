@@ -22,14 +22,14 @@ void I2c_BeginTx(void)
 }
 
 /***********************************************/
-bool I2c_WriteByteToActiveChannel(u8 b, int totalLen)
+bool I2c_WriteByteToActiveChannel(u8 b, int totalLen, bool sendStopBit)
 /***********************************************/
 {
 	Wire.write(b);
 
 	if (++bytes_send >= totalLen)
 	{
-		if (Wire.endTransmission(true) != 0) // Terminate transaction with STOP BIT SET
+		if (Wire.endTransmission(sendStopBit) != 0) // Terminate transaction with STOP BIT SET
 		{
 			Wire.reset();
 			return false;

@@ -12,6 +12,10 @@
 #include "i2c.h"
 #include <application.h>
 
+enum {
+	NO_STOP_BIT = false
+};
+
 /***********************************************/
 ComMaster::ComMaster(slave_mode_t mode)
 /***********************************************/
@@ -79,7 +83,7 @@ void ComMaster::endRx()
 /************************************************
 * Send one byte to active channel
 ************************************************/
-void ComMaster::writeByteToActiveChannel(u8 b)
+void ComMaster::writeByteToActiveChannel(u8 b, bool sendStopBit)
 {
 	if (slave_mode == SLAVE_MODE_SPI)
 	{
@@ -87,7 +91,7 @@ void ComMaster::writeByteToActiveChannel(u8 b)
 	}
 	else // I2C
 	{
-		I2c_WriteByteToActiveChannel(b, bytes_to_send);
+		I2c_WriteByteToActiveChannel(b, bytes_to_send, sendStopBit);
 	}
 }
 
@@ -166,7 +170,7 @@ void ComMaster::write1ReadN(u8 b1, u8* readData, int readLen)
 {
 	bytes_to_send = 1;
 	beginTx();
-	writeByteToActiveChannel(b1);
+	writeByteToActiveChannel(b1, NO_STOP_BIT);
 	beginRx();
 	ReadAfterWrite(readData, readLen);
 	endRx();
@@ -181,8 +185,8 @@ void ComMaster::write2ReadN(u8 b1, u8 b2, u8* readData, int readLen)
 {
 	bytes_to_send = 2;
 	beginTx();
-	writeByteToActiveChannel(b1);
-	writeByteToActiveChannel(b2);
+	writeByteToActiveChannel(b1, NO_STOP_BIT);
+	writeByteToActiveChannel(b2, NO_STOP_BIT);
 	beginRx();
 	ReadAfterWrite(readData, readLen);
 	endRx();
@@ -197,9 +201,9 @@ void ComMaster::write3ReadN(u8 b1, u8 b2, u8 b3, u8* readData, int readLen)
 {
 	bytes_to_send = 3;
 	beginTx();
-	writeByteToActiveChannel(b1);
-	writeByteToActiveChannel(b2);
-	writeByteToActiveChannel(b3);
+	writeByteToActiveChannel(b1, NO_STOP_BIT);
+	writeByteToActiveChannel(b2, NO_STOP_BIT);
+	writeByteToActiveChannel(b3, NO_STOP_BIT);
 	beginRx();
 	ReadAfterWrite(readData, readLen);
 	endRx();
@@ -214,11 +218,11 @@ void ComMaster::write5ReadN(u8 b1, u8 b2, u8 b3, u8 b4, u8 b5, u8* readData, int
 {
 	bytes_to_send = 5;
 	beginTx();
-	writeByteToActiveChannel(b1);
-	writeByteToActiveChannel(b2);
-	writeByteToActiveChannel(b3);
-	writeByteToActiveChannel(b4);
-	writeByteToActiveChannel(b5);
+	writeByteToActiveChannel(b1, NO_STOP_BIT);
+	writeByteToActiveChannel(b2, NO_STOP_BIT);
+	writeByteToActiveChannel(b3, NO_STOP_BIT);
+	writeByteToActiveChannel(b4, NO_STOP_BIT);
+	writeByteToActiveChannel(b5, NO_STOP_BIT);
 	beginRx();
 	ReadAfterWrite(readData, readLen);
 	endRx();
@@ -235,7 +239,7 @@ void ComMaster::writeNReadN(u8 *writeData, int writeLen, u8* readData, int readL
 	beginTx();
 	for (int i = 0; i < writeLen; i++)
 	{
-		writeByteToActiveChannel(writeData[i]);
+		writeByteToActiveChannel(writeData[i], NO_STOP_BIT);
 	}
 	beginRx();
 	ReadAfterWrite(readData, readLen);

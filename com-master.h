@@ -37,7 +37,7 @@ private:
 	void endTx();
 	void beginRx();
 	void endRx();
-	void writeByteToActiveChannel(u8 b);
+	void writeByteToActiveChannel(u8 b, bool sendStopBit = true);
 	void ReadAfterWrite(u8* data, int len);
 };
 
