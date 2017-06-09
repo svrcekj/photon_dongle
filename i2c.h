@@ -22,6 +22,9 @@
 
 #define WIRING_I2C_CHUNK_LIMIT		32 // bytes
 
+#define RECOVER_I2C_BY_END_BEGIN	1
+
+void I2c_Reset();
 void I2c_BeginTx(void);
 bool I2c_WriteByteToActiveChannel(u8 b, int totalLen, bool sendStopBit);
 u32 I2c_Configure(u32 requested_speed);

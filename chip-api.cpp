@@ -11,7 +11,7 @@
 #include "com-master.h"
 #include "hw-specific.h"
 
-extern TDongleState dongleState;
+//extern TDongleState dongleState;
 
 /*****************************************************************************
  *
@@ -26,13 +26,7 @@ TChipApi::TChipApi(ComMaster *slaveDevice)
 	slDev = slaveDevice;
 }
 
-/*
-void TChipApi::assignSlaveDevice(TSlaveDevice *slDev)
-{
-	dev = slDev;
-}
-*/
-
+#if 0
 /*********************************************************/
 void TChipApi::configureDataPin(slave_mode_t slave_mode)
 /*********************************************************/
@@ -45,6 +39,7 @@ void TChipApi::configureDataPin(slave_mode_t slave_mode)
 		delayMicroseconds(20);
 	}
 }
+
 
 /***********************************************/
 void TChipApi::init(slave_mode_t slave_mode)
@@ -183,3 +178,4 @@ bool TChipApi::chipAnsweredByNonZeroId(void)
 	readChipId(&hwVersion, &hwRevision, &fwVersion);
 	return hwVersion != 0 ? true : false;
 }
+#endif

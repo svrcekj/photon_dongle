@@ -23,6 +23,8 @@
 
 #define BYTE_TO_BYTE_MAX_DELAY				50 // milliseconds
 
+#define NR_OF_ACTION_ATTEMPTS				3
+
 class StdProtocolReply;
 
 /*******************************************/

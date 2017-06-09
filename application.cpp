@@ -18,7 +18,7 @@
 
 #include "application.h"
 
-#include "chip-api.h"
+//#include "chip-api.h"
 #include "com-master.h"
 #include "stm32f2xx.h"
 #include "stm32f2xx_dma.h"
@@ -29,18 +29,12 @@
 
 /*-----------------------------------------------------------------------------------------------*/
 
-/*
-const int rows = ROWS;
-const int cols = COLS;
-*/
-
 TCPServer server = TCPServer(SERVER_PORT);
 TCPClient client = TCPClient(SERVER_PORT);
 
 IPAddress myIP;
 
 ComMaster comMaster = ComMaster(DEFAULT_SLAVE_MODE);
-TChipApi chipApi = TChipApi(&comMaster);
 
 StdProtocolRequest staticUsbRequest;
 StdProtocolRequest staticWifiRequest;
@@ -105,15 +99,6 @@ void button_handler(system_event_t event, int duration, void* );
 
 	WifiOff();
 
-/*
-#if DO_NOT_USE_WIFI
-	wifiSuspended = true;
-	WifiOff();
-#else
-	wifiSuspended = false;
-	WifiOn();
-#endif
-*/
 	System.on(button_status, button_handler);
 }
 
@@ -252,8 +237,6 @@ void initObjects(void) // Software initialization
 	{
 		dongleState.i2cSpeed = I2c_Configure(DEFAULT_I2C_SPEED);
 	}
-
-	chipApi.init(dongleState.slave_mode);
 }
 
 /***********************************************/
@@ -263,7 +246,6 @@ void switchToSpiMode()
 	dongleState.slave_mode = SLAVE_MODE_SPI;
 	comMaster.setMode(SLAVE_MODE_SPI);
 	Spi_Configure(dongleState.spiSpeed, &dongleState);
-	//chipApi.init(dongleState.slave_mode);
 }
 
 /***********************************************/
@@ -273,20 +255,6 @@ void switchToI2cMode()
 	dongleState.slave_mode = SLAVE_MODE_I2C;
 	comMaster.setMode(SLAVE_MODE_I2C);
 	I2c_Configure(dongleState.i2cSpeed);
-/*
-	Wire.beginTransmission(DEV_I2C_ADDRESS);
-	Wire.write(0xB6);
-	Wire.write(0x00);
-	Wire.write(0x04);
-	Wire.endTransmission(stopBit=false);
-	Wire.requestFrom(DEV_I2C_ADDRESS, 7);
-	u8 b;
-	while (Wire.available())
-	{
-		b = Wire.read();
-	}
-*/
-	//chipApi.init(dongleState.slave_mode);
 }
 
 /***********************************************/

@@ -186,12 +186,19 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 			u16 writeLength = receivedLength - 8;
 			if ((writeLength > 0) && (writeLength <= MAX_WRITE_LEN))
 			{
-				comMaster.writeN(data, writeLength);
-				reply->sendWriteStatus(STATUS_OK);
+				for (int i = 0; i < NR_OF_ACTION_ATTEMPTS; ++i)
+				{
+					if (comMaster.writeN(data, writeLength))
+					{
+						reply->sendErrorCode(STATUS_OK);
+						return;
+					}
+				}
+				reply->sendErrorCode(STATUS_ERROR);
 			}
 			else
 			{
-				reply->sendWriteStatus(STATUS_WRITE_LEN_ERROR);
+				reply->sendErrorCode(STATUS_WRITE_LEN_ERROR);
 				dongleState->command_type = BAD_COMMAND;
 			}
 			break;
@@ -202,13 +209,20 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 			u8 nrOfDummies = (u8) (data[2] > 0);
 			if ((readLength > 0) && (readLength <= MAX_READ_LEN))
 			{
-				comMaster.readN(readData, readLength + nrOfDummies);
-				reply->setPayloadData(readData + nrOfDummies, readLength);
-				reply->send();
+				for (int i = 0; i < NR_OF_ACTION_ATTEMPTS; ++i)
+				{
+					if (comMaster.readN(readData, readLength + nrOfDummies))
+					{
+						reply->setPayloadData(readData + nrOfDummies, readLength);
+						reply->send();
+						return;
+					}
+				}
+				reply->sendErrorCode(STATUS_ERROR);
 			}
 			else
 			{
-				reply->sendWriteStatus(STATUS_READ_LEN_ERROR);
+				reply->sendErrorCode(STATUS_READ_LEN_ERROR);
 				dongleState->command_type = BAD_COMMAND;
 			}
 			break;
@@ -218,7 +232,7 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 			u16 writeLength = receivedLength - 11;
 			if ((writeLength < 1) || (writeLength > MAX_WRITE_LEN))
 			{
-				reply->sendWriteStatus(STATUS_WRITE_LEN_ERROR);
+				reply->sendErrorCode(STATUS_WRITE_LEN_ERROR);
 				dongleState->command_type = BAD_COMMAND;
 				return;
 			}
@@ -228,14 +242,21 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 
 			if ((readLength < 1) || (readLength > MAX_READ_LEN))
 			{
-				reply->sendWriteStatus(STATUS_READ_LEN_ERROR);
+				reply->sendErrorCode(STATUS_READ_LEN_ERROR);
 				dongleState->command_type = BAD_COMMAND;
 				return;
 			}
 
-			comMaster.writeNReadN(data, writeLength, readData, readLength + nrOfDummies);
-			reply->setPayloadData(readData + nrOfDummies, readLength);
-			reply->send();
+			for (int i = 0; i < NR_OF_ACTION_ATTEMPTS; ++i)
+			{
+				if (comMaster.writeNReadN(data, writeLength, readData, readLength + nrOfDummies))
+				{
+					reply->setPayloadData(readData + nrOfDummies, readLength);
+					reply->send();
+					return;
+				}
+			}
+			reply->sendErrorCode(STATUS_ERROR);
 			break;
 		}
 		case ACTION_GET_VERSION:
@@ -254,7 +275,7 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 		case ACTION_SET_I2C_ADDRESS:
 		{
 			dongleState->i2cAddress = dequeue8();
-			reply->sendWriteStatus(STATUS_OK);
+			reply->sendErrorCode(STATUS_OK);
 			break;
 		}
 		case ACTION_GET_I2C_SPEED:
@@ -279,7 +300,7 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 		case ACTION_SET_SPI_PRESCALLER:
 		{
 			dongleState->spiPrescaller = dequeue8();
-			reply->sendWriteStatus(STATUS_OK);
+			reply->sendErrorCode(STATUS_OK);
 			break;
 		}
 		case ACTION_SYSTEM_CTRL: // 7B 00 0E FF FF 11 11 <CTRL_CMD> 7D

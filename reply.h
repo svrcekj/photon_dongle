@@ -31,7 +31,7 @@ public:
 	void setField(u16 position, u16 field);
 	void send(void);
 	void send(u8 *dataToSent, int len);
-	void sendWriteStatus(u16 status);
+	void sendErrorCode(u16 status);
 	void sendFwVersion(u16 version);
 	void setNrOfDummyBytes(u8 dummyBytes) {nrOfDummyBytes = dummyBytes;}
 	void setPayloadData(u8 *payload, int len);

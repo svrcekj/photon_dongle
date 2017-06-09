@@ -31,7 +31,7 @@ bool I2c_WriteByteToActiveChannel(u8 b, int totalLen, bool sendStopBit)
 	{
 		if (Wire.endTransmission(sendStopBit) != 0) // Terminate transaction with STOP BIT SET
 		{
-			Wire.reset();
+			I2c_Reset();
 			return false;
 		}
 	}
@@ -40,7 +40,7 @@ bool I2c_WriteByteToActiveChannel(u8 b, int totalLen, bool sendStopBit)
 		byte_pos = 0;
 		if (Wire.endTransmission(false) != 0) // Send restart bit to keep connection alive
 		{
-			Wire.reset();
+			I2c_Reset();
 			return false;
 		}
 		Wire.beginTransmission(DEV_I2C_ADDRESS);
@@ -80,7 +80,7 @@ int I2c_Read(u8* data, int len, int timeout)
 
 		if (bytesGot == 0)
 		{
-			Wire.reset();
+			I2c_Reset();
 			return -1;
 		}
 		while (chunk--)
@@ -92,10 +92,45 @@ int I2c_Read(u8* data, int len, int timeout)
 			}
 			if (millis() > time_to_end)
 			{
-				Wire.reset();
+				I2c_Reset();
 				return -1; // exit on timeout
 			}
 		}
 	}
 	return wr_index;
+}
+
+void I2c_Reset()
+{
+#if RECOVER_I2C_BY_END_BEGIN
+	Wire.end();
+	Wire.begin();
+	return;
+#else
+
+	pin_t _SCA = D0;
+	pin_t _SCL = D1;
+
+	Wire.end();
+
+	HAL_Pin_Mode(_SCA, INPUT_PULLUP); //Turn SCA into high impedance input
+	HAL_Pin_Mode(_SCL, OUTPUT); //Turn SCL into a normal GPO
+	HAL_GPIO_Write(_SCL, HIGH); // Start idle HIGH
+
+	//Generate 9 pulses on SCL to tell slave to release the bus
+	for(int i=0; i <9; i++)
+	{
+		HAL_GPIO_Write(_SCL, LOW);
+		delayMicroseconds(10);
+		HAL_GPIO_Write(_SCL, HIGH);
+		delayMicroseconds(10);
+	}
+
+	//Change SCL to be an input
+	HAL_Pin_Mode(_SCL, INPUT_PULLUP);
+
+	//Start i2c over again
+	Wire.begin();
+	delay(2);
+#endif
 }

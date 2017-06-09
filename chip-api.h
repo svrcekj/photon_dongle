@@ -18,7 +18,7 @@
 class TChipApi {
 public:
 	TChipApi(ComMaster *slaveDevice);
-	//void assignSlaveDevice(TSlaveDevice *slDev);
+#if 0
 	void reset(void);
 	void configureDataPin(slave_mode_t slave_mode);
 	void init(slave_mode_t slave_mode);
@@ -31,6 +31,7 @@ public:
 	void getSysInfoRecord(void);
 	void getRawFrame(u16 address, u8 *frameData, int rows, int cols);
 	void burstReadByCommandAndAddress(u8 cmd, u16 address, u8 *data, int len);
+#endif
 private:
 	ComMaster *slDev;
 };

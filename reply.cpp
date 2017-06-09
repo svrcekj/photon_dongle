@@ -81,7 +81,7 @@ void StdProtocolReply::send(u8 *dataToSent, int len)
 	}
 }
 
-void StdProtocolReply::sendWriteStatus(u16 status)
+void StdProtocolReply::sendErrorCode(u16 status)
 {
 	setField(ERROR_POS, status);
 	writeIndex = PAYLOAD_POS;
