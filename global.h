@@ -23,7 +23,7 @@
 //#define MAX_READ_CNT 				4096
 
 #define MAX_WRITE_LEN				256
-#define MAX_READ_LEN				256
+//#define MAX_READ_LEN				256
 
 #define DEFAULT_CHUNK_SIZE  		512
 
@@ -102,7 +102,8 @@ typedef enum {
 	STATUS_OK 					= 0x0000U,
 	STATUS_ERROR				= 0x0001U,
 	STATUS_WRITE_LEN_ERROR		= 0x0002U,
-	STATUS_READ_LEN_ERROR		= 0x0003U
+	STATUS_READ_LEN_ERROR		= 0x0003U,
+	STATUS_MSG_SIZE_LIMIT		= 0x0004U
 } stdReplyStatus_t;
 
 typedef enum {

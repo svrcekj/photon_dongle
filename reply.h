@@ -13,7 +13,9 @@
 #include "request.h"
 #include <application.h>
 
-#define REPLY_MSG_MAX_SIZE					256
+#define REPLY_MAX_PAYLOAD_SIZE				1024
+#define REPLY_HEADER_SIZE					10
+#define REPLY_MAX_PACKET_SIZE						(REPLY_MAX_PAYLOAD_SIZE + REPLY_HEADER_SIZE)
 
 class StdProtocolRequest;
 
@@ -29,12 +31,12 @@ public:
 	void addField32(u32 field);
 	void addData(u8 *newData, int len);
 	void setField(u16 position, u16 field);
-	void send(void);
-	void send(u8 *dataToSent, int len);
+	bool send(void);
+	bool send(u8 *dataToSent, int len);
 	void sendErrorCode(u16 status);
 	void sendFwVersion(u16 version);
 	void setNrOfDummyBytes(u8 dummyBytes) {nrOfDummyBytes = dummyBytes;}
-	void setPayloadData(u8 *payload, int len);
+	bool setPayloadData(u8 *payload, int len);
 	void setErrorCode(u16 err);
 private:
 	enum {
@@ -50,8 +52,8 @@ private:
 		PAYLOAD_POS = 9
 	};
 	StdProtocolRequest *request;
-	void finalize(void);
-	u8 data[REPLY_MSG_MAX_SIZE];
+	bool finalize(void);
+	u8 data[REPLY_MAX_PAYLOAD_SIZE + REPLY_HEADER_SIZE];
 	int writeIndex;
 	u8 nrOfDummyBytes;
 	masterInterface_t masterInterface;

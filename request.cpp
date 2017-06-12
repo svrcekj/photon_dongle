@@ -207,14 +207,22 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 		{
 			u16 readLength = getField(0); // READ_LEN_POS
 			u8 nrOfDummies = (u8) (data[2] > 0);
-			if ((readLength > 0) && (readLength <= MAX_READ_LEN))
+			if ((readLength > 0) && (readLength <= REPLY_MAX_PAYLOAD_SIZE))
 			{
 				for (int i = 0; i < NR_OF_ACTION_ATTEMPTS; ++i)
 				{
 					if (comMaster.readN(readData, readLength + nrOfDummies))
 					{
-						reply->setPayloadData(readData + nrOfDummies, readLength);
-						reply->send();
+						if (!reply->setPayloadData(readData + nrOfDummies, readLength))
+						{
+							reply->sendErrorCode(STATUS_MSG_SIZE_LIMIT);
+							return;
+						}
+						if (!reply->send())
+						{
+							reply->sendErrorCode(STATUS_MSG_SIZE_LIMIT);
+							return;
+						}
 						return;
 					}
 				}
@@ -240,7 +248,7 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 			u16 readLength = getField(writeLength);
 			u16 nrOfDummies = (u8) (data[writeLength + 2] > 0);
 
-			if ((readLength < 1) || (readLength > MAX_READ_LEN))
+			if ((readLength < 1) || (readLength > REPLY_MAX_PAYLOAD_SIZE))
 			{
 				reply->sendErrorCode(STATUS_READ_LEN_ERROR);
 				dongleState->command_type = BAD_COMMAND;
@@ -251,8 +259,16 @@ void StdProtocolRequest::processNew(TDongleState* dongleState)
 			{
 				if (comMaster.writeNReadN(data, writeLength, readData, readLength + nrOfDummies))
 				{
-					reply->setPayloadData(readData + nrOfDummies, readLength);
-					reply->send();
+					if (!reply->setPayloadData(readData + nrOfDummies, readLength))
+					{
+						reply->sendErrorCode(STATUS_MSG_SIZE_LIMIT);
+						return;
+					}
+					if (!reply->send())
+					{
+						reply->sendErrorCode(STATUS_MSG_SIZE_LIMIT);
+						return;
+					}
 					return;
 				}
 			}
